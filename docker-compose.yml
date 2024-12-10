@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  server_hello:
+    image: tigase/tigase-xmpp-server:8.0.0
+    ports:
+      - "8480:8080"
+      - "5422:5222"
+    environment:
+      DB_ROOT_USER: admin
+      DB_ROOT_PASS: admin
+      ADMIN_JID: admin@server_hello
+      ADMIN_PASSWORD: admin
+    volumes:
+      - ./tigase/config/tigase.conf:/home/tigase/tigase-server/etc/tigase.conf:ro
+      - ./tigase/config/config.tdsl:/home/tigase/tigase-server/etc/config.tdsl:ro
+
+  spade_hello:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: "${CPUS:-1.0}"
+          memory: "512MB"
