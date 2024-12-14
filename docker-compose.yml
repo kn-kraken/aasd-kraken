@@ -4,39 +4,12 @@ services:
     image: tigase/tigase-xmpp-server:8.0.0
     ports:
       - "8480:8080"
-      - "5422:5222"
+      - "5222:5222"
     environment:
       DB_ROOT_USER: admin
       DB_ROOT_PASS: admin
-      ADMIN_JID: admin@server_hello
+      ADMIN_JID: admin@localhost
       ADMIN_PASSWORD: admin
     volumes:
       - ./tigase/config/tigase.conf:/home/tigase/tigase-server/etc/tigase.conf:ro
       - ./tigase/config/config.tdsl:/home/tigase/tigase-server/etc/config.tdsl:ro
-
-  agent_hub:
-    build:
-      context: agents/hub
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          memory: "512MB"
-          
-  agent_citizen:
-    build:
-      context: agents/citizen
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          memory: "512MB"
-  
-  agent_premise_for_rent:
-    build:
-      context: agents/premise_for_rent
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          memory: "512MB"

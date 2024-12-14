@@ -8,7 +8,7 @@ class PremiseForRentAgent(Agent):
     class OpenOfferRequest(OneShotBehaviour):
         async def run(self):
             print("OpenOfferRequest running")
-            msg = Message(to="hub_agent@server_hello")
+            msg = Message(to="hub_agent@localhost")
             msg.set_metadata("performative", "propose")
             msg.body = "OpenOfferRequest details"
             await self.send(msg)
@@ -21,7 +21,7 @@ class PremiseForRentAgent(Agent):
 
 async def main():
     premise_for_rent_agent = PremiseForRentAgent(
-        "premise_for_rent_agent@server_hello", "premise_for_rent_agent_password"
+        "premise_for_rent_agent@localhost", "premise_for_rent_agent_password"
     )
     await premise_for_rent_agent.start(auto_register=True)
 
