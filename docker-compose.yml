@@ -31,3 +31,12 @@ services:
       resources:
         limits:
           memory: "512MB"
+  
+  agent_premise_for_rent:
+    build:
+      context: agents/premise_for_rent
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          memory: "512MB"

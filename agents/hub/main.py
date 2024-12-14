@@ -1,12 +1,12 @@
 import spade
 from spade.agent import Agent
-from spade.behaviour import OneShotBehaviour
+from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
 
 class HubAgent(Agent):
-    class RecvBehav(OneShotBehaviour):
+    class RecvBehav(CyclicBehaviour):
         async def run(self):
             print("RecvBehav running")
 
@@ -16,13 +16,17 @@ class HubAgent(Agent):
             else:
                 print("Did not received any message after 10 seconds")
 
-            await self.agent.stop()
 
     async def setup(self):
         print("HubAgent started")
         b = self.RecvBehav()
-        template = Template()
-        template.set_metadata("performative", "inform")
+        template_inform = Template(metadata={"performative": "inform"})
+        template_propose = Template(metadata={"performative": "propose"})
+        template_request = Template(metadata={"performative": "request"})
+        template_cancel = Template(metadata={"performative": "cancel"})
+        template = (
+            template_inform | template_propose | template_request | template_cancel
+        )
         self.add_behaviour(b, template)
 
 
