@@ -5,20 +5,20 @@ from spade.message import Message
 import json
 
 
-class PremiseForRentAgent(Agent):
-    class OpenOfferRequest(OneShotBehaviour):
+class FutureTenantAgent(Agent):
+    class StartNegotiation(OneShotBehaviour):
         async def run(self):
-            print("OpenOfferRequest running")
+            print("StartNegotiation running")
             msg = Message(
                 to="hub_agent@localhost",
                 metadata={
                     "performative": "propose",
-                    "conversation_id ": "OpenOfferRequest",
+                    "conversation_id ": "StartNegotiation",
                 },
                 body=json.dumps(
                     {
-                        "price": 100,
-                        "location": "Nowowiejska 63/7",
+                        "pole1": 100,
+                        "pole2": "pole2",
                     }
                 ),
             )
@@ -26,17 +26,17 @@ class PremiseForRentAgent(Agent):
             await self.agent.stop()
 
     async def setup(self):
-        print("PremiseForRentAgent started")
-        self.add_behaviour(self.OpenOfferRequest())
+        print("FutureTenantAgent started")
+        self.add_behaviour(self.StartNegotiation())
 
 
 async def main():
-    premise_for_rent_agent = PremiseForRentAgent(
-        "premise_for_rent_agent@localhost", "premise_for_rent_agent_password"
+    future_tenant = FutureTenantAgent(
+        "future_tenant@localhost", "future_tenant_password"
     )
-    await premise_for_rent_agent.start(auto_register=True)
+    await future_tenant.start(auto_register=True)
 
-    await spade.wait_until_finished(premise_for_rent_agent)
+    await spade.wait_until_finished(future_tenant)
     print("Agents finished")
 
 
