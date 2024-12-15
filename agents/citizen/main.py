@@ -2,16 +2,20 @@ import spade
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
-from spade.template import Template
 
 
 class CitizenAgent(Agent):
     class ServiceDemandRequest(OneShotBehaviour):
         async def run(self):
             print("ServiceDemandRequest running")
-            msg = Message(to="hub_agent@localhost")
-            msg.set_metadata("performative", "inform")
-            msg.body = "We need more żabkas in this area"
+            msg = Message(
+                to="hub_agent@localhost",
+                metadata={
+                    "performative": "inform",
+                    "conversation_id ": "ServiceDemandRequest",
+                },
+                body="żabka",
+            )
 
             await self.send(msg)
             print("Message sent!")
@@ -22,7 +26,6 @@ class CitizenAgent(Agent):
         print("CitizenAgent started")
         b = self.ServiceDemandRequest()
         self.add_behaviour(b)
-
 
 
 async def main():
