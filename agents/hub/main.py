@@ -31,7 +31,7 @@ class HubAgent(Agent):
 
 
 async def main():
-    hub_agent = HubAgent("hub_agent@server_hello", "hub_agent_password")
+    hub_agent = HubAgent("hub_agent@localhost", "hub_agent_password")
     await hub_agent.start(auto_register=True)
     print("hub_agent started")
 

@@ -9,7 +9,7 @@ class CitizenAgent(Agent):
     class ServiceDemandRequest(OneShotBehaviour):
         async def run(self):
             print("ServiceDemandRequest running")
-            msg = Message(to="hub_agent@server_hello")
+            msg = Message(to="hub_agent@localhost")
             msg.set_metadata("performative", "inform")
             msg.body = "We need more żabkas in this area"
 
@@ -26,7 +26,7 @@ class CitizenAgent(Agent):
 
 
 async def main():
-    citizen_agent = CitizenAgent("citizen_agent@server_hello", "citizen_agent_password")
+    citizen_agent = CitizenAgent("citizen_agent@localhost", "citizen_agent_password")
     await citizen_agent.start(auto_register=True)
     print("citizen_agent started")
 
