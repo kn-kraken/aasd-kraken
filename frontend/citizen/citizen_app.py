@@ -4,7 +4,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 
-from services import SERVICE_OPTIONS
+from system_data import SERVICE_OPTIONS
 
 def main(page: ft.Page):
     page.title = "Formularz zgłoszenia zapotrzebowania"

@@ -30,3 +30,5 @@ SERVICE_OPTIONS = [
     "Punkt naprawy telefonów/elektroniki",
     "Inne",
 ]
+
+PREMISE_OPTIONS = []
