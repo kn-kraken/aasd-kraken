@@ -3,6 +3,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.template import Template
 import json
+import inspect
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -323,17 +324,21 @@ class HubAgent(Agent):
     async def setup(self):
         print("HubAgent started")
         
-        # Add all behaviors
-        template = Template(metadata={"conversation-id": "bid"})
-        self.add_behaviour(self.HandleBidBehaviour(), template)
-        
-        template = Template(metadata={"conversation-id": "confirmation-response"})
-        self.add_behaviour(self.HandleConfirmationBehaviour(), template)
-        
-        self.add_behaviour(self.AuctionManagerBehaviour())
-        
-        # Add existing behaviors
-        for attr in self.__dict__.values():
-            if isinstance(attr, CyclicBehaviour) and hasattr(attr, "metadata"):
+        for d in [d for d in dir(self) if inspect.isclass(getattr(self, d)) and d != '__class__']:
+            attr = getattr(self, d)
+            if issubclass(attr, CyclicBehaviour) and hasattr(attr, "metadata"):
                 template = Template(metadata=attr.metadata)
-                self.add_behaviour(attr(self), template)
+                self.add_behaviour(attr(), template)
+
+
+async def main():
+    hub_agent = HubAgent("hub_agent@localhost", "hub_agent_password")
+    await hub_agent.start(auto_register=True)
+    print("hub_agent started")
+
+    await spade.wait_until_finished(hub_agent)
+    print("Agents finished")
+
+
+if __name__ == "__main__":
+    spade.run(main())
