@@ -234,7 +234,13 @@ class HubAgent(Agent):
             new_bid = Bid(
                 bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now()
             )
-            auction.bids.append(new_bid)
+            current_bid = next(
+                (i for i, bid in enumerate(auction.bids) if bid.bidder_jid == bidder_jid),
+            )
+            if new_bid.amount <= auction.bids[current_bid].amount:
+                return
+
+            auction.bids[current_bid] = new_bid
             auction.extend_duration()
 
             # Notify outbid agents
