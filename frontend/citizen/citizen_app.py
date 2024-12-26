@@ -2,8 +2,10 @@ import flet as ft
 import sys
 import os
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 
+from agents.citizen.main import run_citizen_agent
 from system_data import SERVICE_OPTIONS
 
 def main(page: ft.Page):
@@ -21,9 +23,13 @@ def main(page: ft.Page):
         name = name_input.value
         service = service_input.value
         description = description_input.value
-        
+
+        # tu trzeba dodać localization type of service i priority, nwm czy opis imo troche ciężko będzie by cos tym zrobić
+        run_citizen_agent([1.0, 10.2], service, "High")
+
         print(f"Nowe zapotrzebowanie:\nImię: {name}\nUsługa: {service}\nOpis: {description}")
         text = ft.Text(f"Dziękujemy za zgłoszenie zapotrzebowania!")
+
         text.padding = ft.padding.all(20)
         page.add(text)
 

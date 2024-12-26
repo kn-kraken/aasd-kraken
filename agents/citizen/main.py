@@ -4,6 +4,8 @@ from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 import json
 
+
+# AGENT
 class CitizenAgent(Agent):
     class ServiceDemandRequest(OneShotBehaviour):
         def __init__(self, localization, service_type, priority):
@@ -36,14 +38,20 @@ class CitizenAgent(Agent):
         behavior = self.ServiceDemandRequest(localization, service_type, priority)
         self.add_behaviour(behavior)
 
-async def main():
+
+# API
+
+async def main(localization, service_type, priority):
     agent = CitizenAgent("citizen_agent@localhost", "citizen_agent_password")
     await agent.start(auto_register=True)
-    agent.add_service_demand_request([1.0, 10.2], "Żabka", "High")
-
+    agent.add_service_demand_request(localization, service_type, priority)
     await spade.wait_until_finished(agent)
-
     await agent.stop()
 
+
+def run_citizen_agent(localization, service_type, priority):
+    spade.run(main(localization, service_type, priority))
+
+
 if __name__ == "__main__":
-    spade.run(main())
+    spade.run(main([1.0, 10.2], "Żabka", "High"))
