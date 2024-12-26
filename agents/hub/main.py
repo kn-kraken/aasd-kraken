@@ -21,7 +21,7 @@ class RentalRequest:
     min_price: int
     max_price: int
     location: tuple[float, float]
-    agent_jid: str 
+    agent_jid: str
 
 
 def is_close(location1, location2):
@@ -77,7 +77,7 @@ class HubAgent(Agent):
                 min_price=data["min_price"],
                 max_price=data["max_price"],
                 location=tuple(data["location"]),
-                agent_jid=str(msg.sender)
+                agent_jid=str(msg.sender),
             )
 
             # Store the request
@@ -85,46 +85,63 @@ class HubAgent(Agent):
 
             # Check for matching offers that already have active auctions
             for offer_id, auction in self.agent.active_auctions.items():
-                if (is_close(auction.offer.location, request.location) and 
-                    request.min_price <= auction.offer.starting_price <= request.max_price):
+                if (
+                    is_close(auction.offer.location, request.location)
+                    and request.min_price
+                    <= auction.offer.starting_price
+                    <= request.max_price
+                ):
                     # Notify the requester about the existing auction
                     msg = spade.message.Message(
                         to=request.agent_jid,
                         metadata={"conversation-id": "auction_start"},
-                        body=json.dumps({
-                            "offer_id": offer_id,
-                            "starting_price": auction.offer.starting_price,
-                            "location": auction.offer.location,
-                            "current_highest_bid": max((bid.amount for bid in auction.bids), 
-                                                     default=auction.offer.starting_price),
-                            "end_time": auction.end_time.isoformat()
-                        })
+                        body=json.dumps(
+                            {
+                                "offer_id": offer_id,
+                                "starting_price": auction.offer.starting_price,
+                                "location": auction.offer.location,
+                                "current_highest_bid": max(
+                                    (bid.amount for bid in auction.bids),
+                                    default=auction.offer.starting_price,
+                                ),
+                                "end_time": auction.end_time.isoformat(),
+                            }
+                        ),
                     )
                     await self.send(msg)
 
             # Check for matching offers that don't have auctions yet
             matching_offers = [
-                (offer_id, offer) for offer_id, offer in enumerate(self.agent.rental_offers)
-                if (is_close(offer.location, request.location) and 
-                    request.min_price <= offer.starting_price <= request.max_price and
-                    str(offer_id) not in self.agent.active_auctions)
+                (offer_id, offer)
+                for offer_id, offer in enumerate(self.agent.rental_offers)
+                if (
+                    is_close(offer.location, request.location)
+                    and request.min_price <= offer.starting_price <= request.max_price
+                    and str(offer_id) not in self.agent.active_auctions
+                )
             ]
 
             # Start new auctions if there are multiple requests for the same offer
             for offer_id, offer in matching_offers:
                 matching_requests = [
-                    req for req in self.agent.rental_requests
-                    if (is_close(offer.location, req.location) and 
-                        req.min_price <= offer.starting_price <= req.max_price)
+                    req
+                    for req in self.agent.rental_requests
+                    if (
+                        is_close(offer.location, req.location)
+                        and req.min_price <= offer.starting_price <= req.max_price
+                    )
                 ]
 
-                if len(matching_requests) > 1 and str(offer_id) not in self.agent.active_auctions:
+                if (
+                    len(matching_requests) > 1
+                    and str(offer_id) not in self.agent.active_auctions
+                ):
                     # Create new auction
                     auction = Auction(
                         offer=offer,
                         bids=[],
                         end_time=datetime.now() + timedelta(minutes=60),
-                        status='bidding'
+                        status="bidding",
                     )
                     self.agent.active_auctions[str(offer_id)] = auction
 
@@ -133,12 +150,14 @@ class HubAgent(Agent):
                         msg = spade.message.Message(
                             to=req.agent_jid,
                             metadata={"conversation-id": "auction_start"},
-                            body=json.dumps({
-                                "offer_id": str(offer_id),
-                                "starting_price": offer.starting_price,
-                                "location": offer.location,
-                                "end_time": auction.end_time.isoformat()
-                            })
+                            body=json.dumps(
+                                {
+                                    "offer_id": str(offer_id),
+                                    "starting_price": offer.starting_price,
+                                    "location": offer.location,
+                                    "end_time": auction.end_time.isoformat(),
+                                }
+                            ),
                         )
                         await self.send(msg)
 
@@ -158,8 +177,9 @@ class HubAgent(Agent):
             offer_id = str(msg.sender)
 
             matching_requests = [
-                request for request in self.agent.rental_requests
-                if is_close(offer.location, request.location) 
+                request
+                for request in self.agent.rental_requests
+                if is_close(offer.location, request.location)
                 and request.min_price <= offer.starting_price <= request.max_price
             ]
 
@@ -168,21 +188,23 @@ class HubAgent(Agent):
                     offer=offer,
                     bids=[],
                     end_time=datetime.now() + timedelta(minutes=60),
-                    status='bidding'
+                    status="bidding",
                 )
                 self.agent.active_auctions[offer_id] = auction
-                
+
                 # Notify all matching requesters about the auction
                 for request in matching_requests:
                     msg = spade.message.Message(
                         to=request.agent_jid,
                         metadata={"conversation-id": "auction_start"},
-                        body=json.dumps({
-                            "offer_id": offer_id,
-                            "starting_price": offer.starting_price,
-                            "location": offer.location,
-                            "end_time": auction.end_time.isoformat()
-                        })
+                        body=json.dumps(
+                            {
+                                "offer_id": offer_id,
+                                "starting_price": offer.starting_price,
+                                "location": offer.location,
+                                "end_time": auction.end_time.isoformat(),
+                            }
+                        ),
                     )
                     await self.send(msg)
 
@@ -205,11 +227,13 @@ class HubAgent(Agent):
             bidder_jid = str(msg.sender)
 
             auction = self.agent.active_auctions.get(offer_id)
-            if not auction or auction.status != 'bidding':
+            if not auction or auction.status != "bidding":
                 return
 
             # Record the bid
-            new_bid = Bid(bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now())
+            new_bid = Bid(
+                bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now()
+            )
             auction.bids.append(new_bid)
             auction.extend_duration()
 
@@ -219,10 +243,9 @@ class HubAgent(Agent):
                 msg = spade.message.Message(
                     to=agent_jid,
                     metadata={"conversation-id": "outbid_notification"},
-                    body=json.dumps({
-                        "offer_id": offer_id,
-                        "current_highest_bid": bid_amount
-                    })
+                    body=json.dumps(
+                        {"offer_id": offer_id, "current_highest_bid": bid_amount}
+                    ),
                 )
                 await self.send(msg)
 
@@ -232,48 +255,65 @@ class HubAgent(Agent):
             now = datetime.now()
 
             for offer_id, auction in list(self.agent.active_auctions.items()):
-                if auction.status == 'bidding' and now >= auction.end_time:
+                if auction.status == "bidding" and now >= auction.end_time:
                     # Transition to confirmation phase
-                    auction.status = 'confirming'
+                    auction.status = "confirming"
                     winning_bids = auction.get_winning_bids()
                     if winning_bids:
                         auction.current_confirming_bidder = winning_bids[0].bidder_jid
                         auction.confirmation_deadline = now + timedelta(minutes=20)
-                        
+
                         # Ask for confirmation
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
                             metadata={"conversation-id": "confirmation_request"},
-                            body=json.dumps({
-                                "offer_id": offer_id,
-                                "bid_amount": winning_bids[0].amount
-                            })
+                            body=json.dumps(
+                                {
+                                    "offer_id": offer_id,
+                                    "bid_amount": winning_bids[0].amount,
+                                }
+                            ),
                         )
                         await self.send(msg)
 
-                elif auction.status == 'confirming' and now >= auction.confirmation_deadline:
+                elif (
+                    auction.status == "confirming"
+                    and now >= auction.confirmation_deadline
+                ):
                     # Move to next bidder or close auction
                     winning_bids = auction.get_winning_bids()
-                    current_index = next((i for i, bid in enumerate(winning_bids) 
-                                       if bid.bidder_jid == auction.current_confirming_bidder), -1)
-                    
+                    current_index = next(
+                        (
+                            i
+                            for i, bid in enumerate(winning_bids)
+                            if bid.bidder_jid == auction.current_confirming_bidder
+                        ),
+                        -1,
+                    )
+
                     if current_index + 1 < len(winning_bids):
                         # Try next bidder
-                        auction.current_confirming_bidder = winning_bids[current_index + 1].bidder_jid
+                        auction.current_confirming_bidder = winning_bids[
+                            current_index + 1
+                        ].bidder_jid
                         auction.confirmation_deadline = now + timedelta(minutes=20)
-                        
+
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
                             metadata={"conversation-id": "confirmation_request"},
-                            body=json.dumps({
-                                "offer_id": offer_id,
-                                "bid_amount": winning_bids[current_index + 1].amount
-                            })
+                            body=json.dumps(
+                                {
+                                    "offer_id": offer_id,
+                                    "bid_amount": winning_bids[
+                                        current_index + 1
+                                    ].amount,
+                                }
+                            ),
                         )
                         await self.send(msg)
                     else:
                         # No more bidders, close auction
-                        auction.status = 'completed'
+                        auction.status = "completed"
                         del self.agent.active_auctions[offer_id]
 
     class HandleConfirmationBehaviour(CyclicBehaviour):
@@ -288,43 +328,46 @@ class HubAgent(Agent):
             bidder_jid = str(msg.sender)
 
             auction = self.agent.active_auctions.get(offer_id)
-            if not auction or auction.status != 'confirming':
+            if not auction or auction.status != "confirming":
                 return
 
             if confirmed and bidder_jid == auction.current_confirming_bidder:
                 # Notify winner and seller
-                winner_bid = next(bid for bid in auction.bids 
-                                if bid.bidder_jid == bidder_jid)
-                
+                winner_bid = next(
+                    bid for bid in auction.bids if bid.bidder_jid == bidder_jid
+                )
+
                 # Notify winner
                 msg = spade.message.Message(
                     to=bidder_jid,
                     metadata={"conversation-id": "auction_won"},
-                    body=json.dumps({
-                        "offer_id": offer_id,
-                        "final_price": winner_bid.amount
-                    })
+                    body=json.dumps(
+                        {"offer_id": offer_id, "final_price": winner_bid.amount}
+                    ),
                 )
                 await self.send(msg)
-                
+
                 # Notify seller
                 msg = spade.message.Message(
                     to=offer_id,
                     metadata={"conversation-id": "auction_completed"},
-                    body=json.dumps({
-                        "winner": bidder_jid,
-                        "final_price": winner_bid.amount
-                    })
+                    body=json.dumps(
+                        {"winner": bidder_jid, "final_price": winner_bid.amount}
+                    ),
                 )
                 await self.send(msg)
-                
-                auction.status = 'completed'
+
+                auction.status = "completed"
                 del self.agent.active_auctions[offer_id]
 
     async def setup(self):
         print("HubAgent started")
-        
-        for d in [d for d in dir(self) if inspect.isclass(getattr(self, d)) and d != '__class__']:
+
+        for d in [
+            d
+            for d in dir(self)
+            if inspect.isclass(getattr(self, d)) and d != "__class__"
+        ]:
             attr = getattr(self, d)
             if issubclass(attr, CyclicBehaviour) and hasattr(attr, "metadata"):
                 template = Template(metadata=attr.metadata)
