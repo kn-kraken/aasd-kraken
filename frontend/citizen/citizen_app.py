@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 
-from agents.citizen.main import run_citizen_agent
+from agents.citizen.main import run_citizen_agent, ServiceDemand
 from system_data import SERVICE_OPTIONS
 
 def main(page: ft.Page):
@@ -25,7 +25,7 @@ def main(page: ft.Page):
         description = description_input.value
 
         # tu trzeba dodać localization type of service i priority, nwm czy opis imo troche ciężko będzie by cos tym zrobić
-        run_citizen_agent([1.0, 10.2], service, "High")
+        run_citizen_agent(ServiceDemand(localization=[1.0, 10.2], service_type=service, priority="High"))
 
         print(f"Nowe zapotrzebowanie:\nImię: {name}\nUsługa: {service}\nOpis: {description}")
         text = ft.Text(f"Dziękujemy za zgłoszenie zapotrzebowania!")
