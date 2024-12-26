@@ -94,7 +94,7 @@ class HubAgent(Agent):
                     # Notify the requester about the existing auction
                     msg = spade.message.Message(
                         to=request.agent_jid,
-                        metadata={"conversation-id": "auction_start"},
+                        metadata={"conversation-id": "auction-start"},
                         body=json.dumps(
                             {
                                 "offer_id": offer_id,
@@ -149,7 +149,7 @@ class HubAgent(Agent):
                     for req in matching_requests:
                         msg = spade.message.Message(
                             to=req.agent_jid,
-                            metadata={"conversation-id": "auction_start"},
+                            metadata={"conversation-id": "auction-start"},
                             body=json.dumps(
                                 {
                                     "offer_id": str(offer_id),
@@ -196,7 +196,7 @@ class HubAgent(Agent):
                 for request in matching_requests:
                     msg = spade.message.Message(
                         to=request.agent_jid,
-                        metadata={"conversation-id": "auction_start"},
+                        metadata={"conversation-id": "auction-start"},
                         body=json.dumps(
                             {
                                 "offer_id": offer_id,
@@ -242,7 +242,7 @@ class HubAgent(Agent):
             for agent_jid in outbid_agents:
                 msg = spade.message.Message(
                     to=agent_jid,
-                    metadata={"conversation-id": "outbid_notification"},
+                    metadata={"conversation-id": "outbid-notification"},
                     body=json.dumps(
                         {"offer_id": offer_id, "current_highest_bid": bid_amount}
                     ),
@@ -258,6 +258,20 @@ class HubAgent(Agent):
                 if auction.status == "bidding" and now >= auction.end_time:
                     # Transition to confirmation phase
                     auction.status = "confirming"
+
+                    # Notify all bidders
+                    for bid in auction.bids:
+                        msg = spade.message.Message(
+                            to=bid.bidder_jid,
+                            metadata={"conversation-id": "auction-stop"},
+                            body=json.dumps(
+                                {
+                                    "offer_id": offer_id,
+                                }
+                            ),
+                        )
+                        await self.send(msg)
+
                     winning_bids = auction.get_winning_bids()
                     if winning_bids:
                         auction.current_confirming_bidder = winning_bids[0].bidder_jid
@@ -266,7 +280,7 @@ class HubAgent(Agent):
                         # Ask for confirmation
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
-                            metadata={"conversation-id": "confirmation_request"},
+                            metadata={"conversation-id": "confirmation-request"},
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
@@ -300,7 +314,7 @@ class HubAgent(Agent):
 
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
-                            metadata={"conversation-id": "confirmation_request"},
+                            metadata={"conversation-id": "confirmation-request"},
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
@@ -332,27 +346,37 @@ class HubAgent(Agent):
                 return
 
             if confirmed and bidder_jid == auction.current_confirming_bidder:
-                # Notify winner and seller
                 winner_bid = next(
                     bid for bid in auction.bids if bid.bidder_jid == bidder_jid
                 )
 
-                # Notify winner
-                msg = spade.message.Message(
-                    to=bidder_jid,
-                    metadata={"conversation-id": "auction_won"},
-                    body=json.dumps(
-                        {"offer_id": offer_id, "final_price": winner_bid.amount}
+                winning_bids = auction.get_winning_bids()
+                current_index = next(
+                    (
+                        i
+                        for i, bid in enumerate(winning_bids)
+                        if bid.bidder_jid == auction.current_confirming_bidder
                     ),
+                    -1,
                 )
-                await self.send(msg)
+
+                if current_index + 1 < len(winning_bids):
+                    for losing_bid in winning_bids[current_index + 1 :]:
+                        msg = spade.message.Message(
+                            to=losing_bid.bidder_jid,
+                            metadata={"conversation-id": "auction-lost"},
+                            body=json.dumps(
+                                {"offer_id": offer_id}
+                            ),
+                        )
+                        await self.send(msg)
 
                 # Notify seller
                 msg = spade.message.Message(
                     to=offer_id,
-                    metadata={"conversation-id": "auction_completed"},
+                    metadata={"conversation-id": "auction-completed"},
                     body=json.dumps(
-                        {"winner": bidder_jid, "final_price": winner_bid.amount}
+                        {"offer_id": offer_id, "final_price": winner_bid.amount}
                     ),
                 )
                 await self.send(msg)
@@ -377,6 +401,7 @@ class HubAgent(Agent):
 async def main():
     hub_agent = HubAgent("hub_agent@localhost", "hub_agent_password")
     await hub_agent.start(auto_register=True)
+    hub_agent.web.start(hostname="127.0.0.1", port=10001)
     print("hub_agent started")
 
     await spade.wait_until_finished(hub_agent)

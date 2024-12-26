@@ -8,35 +8,40 @@
 - offer_id: str
 - amount: int
 
+<!-- DONE -->
 ## register-rental
 - min_price: int
 - max_price: int
 - location: [float, float]
 
+<!-- DONE -->
 ## rental-offer
 - starting_price: int
 - location: [float, float]
 
 # Out
 
-## auction_start
+## auction-start
 - offer_id: str
 - starting_price: int
 - location: [float, float]
 - end_time: str
 - current_highest_bid: int
 
-## outbid_notification
+## outbid-notification
 - offer_id: str
 - current_highest_bid: int
 
-## auction_end
+## auction-stop
 - offer_id: str
 
-## confirmation_request
+## confirmation-request
 - offer_id: str
 - bid_amount: int
 
-## auction_result
+## auction-lost
 - offer_id: str
-- won: bool
+
+## auction-completed
+- offer_id: str
+- final_price: int
