@@ -398,7 +398,7 @@ class HubAgent(Agent):
         metadata={
             "performative": "inform",
             "conversation-id": "confirmation-response",
-        },
+        }
 
     async def setup(self):
         print("HubAgent started")
