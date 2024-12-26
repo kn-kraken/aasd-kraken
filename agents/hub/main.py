@@ -10,6 +10,12 @@ from typing import Dict, List, Optional
 import asyncio
 import uuid
 
+DEFAULT_METADATA = {
+    "language": "JSON",
+    "ontology": "kraken",
+}
+
+
 @dataclass
 class RentalOffer:
     agent_jid: str
@@ -92,7 +98,13 @@ class HubAgent(Agent):
                     <= auction.offer.starting_price
                     <= request.max_price
                 ):
-                    auction.bids.append(Bid(bidder_jid=request.agent_jid, amount=auction.offer.starting_price, timestamp=datetime.now()))
+                    auction.bids.append(
+                        Bid(
+                            bidder_jid=request.agent_jid,
+                            amount=auction.offer.starting_price,
+                            timestamp=datetime.now(),
+                        )
+                    )
                     # Notify the requester about the existing auction
                     msg = spade.message.Message(
                         to=request.agent_jid,
@@ -149,7 +161,13 @@ class HubAgent(Agent):
 
                     # Notify all matching requesters about the new auction
                     for req in matching_requests:
-                        auction.bids.append(Bid(bidder_jid=req.agent_jid, amount=offer.starting_price, timestamp=datetime.now()))
+                        auction.bids.append(
+                            Bid(
+                                bidder_jid=req.agent_jid,
+                                amount=offer.starting_price,
+                                timestamp=datetime.now(),
+                            )
+                        )
                         msg = spade.message.Message(
                             to=req.agent_jid,
                             metadata={"conversation-id": "auction-start"},
@@ -167,6 +185,7 @@ class HubAgent(Agent):
         metadata = {
             "performative": "inform",
             "conversation-id": "register-rental",
+            **DEFAULT_METADATA,
         }
 
     class RegisterRentalOfferRecvBhv(CyclicBehaviour):
@@ -197,10 +216,19 @@ class HubAgent(Agent):
 
                 # Notify all matching requesters about the auction
                 for request in matching_requests:
-                    auction.bids.append(Bid(bidder_jid=request.agent_jid, amount=offer.starting_price, timestamp=datetime.now()))
+                    auction.bids.append(
+                        Bid(
+                            bidder_jid=request.agent_jid,
+                            amount=offer.starting_price,
+                            timestamp=datetime.now(),
+                        )
+                    )
                     msg = spade.message.Message(
                         to=request.agent_jid,
-                        metadata={"conversation-id": "auction-start"},
+                        metadata={
+                            "conversation-id": "auction-start",
+                            **DEFAULT_METADATA,
+                        },
                         body=json.dumps(
                             {
                                 "offer_id": offer_id,
@@ -239,7 +267,11 @@ class HubAgent(Agent):
                 bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now()
             )
             current_bid = next(
-                (i for i, bid in enumerate(auction.bids) if bid.bidder_jid == bidder_jid),
+                (
+                    i
+                    for i, bid in enumerate(auction.bids)
+                    if bid.bidder_jid == bidder_jid
+                ),
             )
             if new_bid.amount <= auction.bids[current_bid].amount:
                 return
@@ -278,7 +310,10 @@ class HubAgent(Agent):
                     for bid in auction.bids:
                         msg = spade.message.Message(
                             to=bid.bidder_jid,
-                            metadata={"conversation-id": "auction-stop"},
+                            metadata={
+                                "conversation-id": "auction-stop",
+                                **DEFAULT_METADATA,
+                            },
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
@@ -295,7 +330,10 @@ class HubAgent(Agent):
                         # Ask for confirmation
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
-                            metadata={"conversation-id": "confirmation-request"},
+                            metadata={
+                                "conversation-id": "confirmation-request",
+                                **DEFAULT_METADATA,
+                            },
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
@@ -329,7 +367,10 @@ class HubAgent(Agent):
 
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
-                            metadata={"conversation-id": "confirmation-request"},
+                            metadata={
+                                "conversation-id": "confirmation-request",
+                                **DEFAULT_METADATA,
+                            },
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
@@ -379,17 +420,21 @@ class HubAgent(Agent):
                     for losing_bid in winning_bids[current_index + 1 :]:
                         msg = spade.message.Message(
                             to=losing_bid.bidder_jid,
-                            metadata={"conversation-id": "auction-lost"},
-                            body=json.dumps(
-                                {"offer_id": offer_id}
-                            ),
+                            metadata={
+                                "conversation-id": "auction-lost",
+                                **DEFAULT_METADATA,
+                            },
+                            body=json.dumps({"offer_id": offer_id}),
                         )
                         await self.send(msg)
 
                 # Notify seller
                 msg = spade.message.Message(
                     to=auction.offer.agent_jid,
-                    metadata={"conversation-id": "auction-completed"},
+                    metadata={
+                        "conversation-id": "auction-completed",
+                        **DEFAULT_METADATA,
+                    },
                     body=json.dumps(
                         {"offer_id": offer_id, "final_price": winner_bid.amount}
                     ),
@@ -399,9 +444,10 @@ class HubAgent(Agent):
                 auction.status = "completed"
                 del self.agent.active_auctions[offer_id]
 
-        metadata={
+        metadata = {
             "performative": "inform",
             "conversation-id": "confirmation-response",
+            **DEFAULT_METADATA,
         }
 
     async def setup(self):

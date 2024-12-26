@@ -4,6 +4,12 @@ from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 import json
 
+DEFAULT_METADATA = {
+    "language": "JSON",
+    "ontology": "kraken",
+}
+
+
 class CitizenAgent(Agent):
     class ServiceDemandRequest(OneShotBehaviour):
         def __init__(self, localization, service_type, priority):
@@ -12,7 +18,6 @@ class CitizenAgent(Agent):
             self.service_type = service_type
             self.priority = priority
 
-
         async def run(self):
             print("ServiceDemandRequest running")
             msg = Message(
@@ -20,12 +25,15 @@ class CitizenAgent(Agent):
                 metadata={
                     "performative": "inform",
                     "conversation_id": "ServiceDemandRequest",
+                    **DEFAULT_METADATA,
                 },
-                body=json.dumps({
-                    "localization": self.localization,
-                    "service_type": self.service_type,
-                    "priority": self.priority,
-                }),
+                body=json.dumps(
+                    {
+                        "localization": self.localization,
+                        "service_type": self.service_type,
+                        "priority": self.priority,
+                    }
+                ),
             )
 
             await self.send(msg)
@@ -36,6 +44,7 @@ class CitizenAgent(Agent):
         behavior = self.ServiceDemandRequest(localization, service_type, priority)
         self.add_behaviour(behavior)
 
+
 async def main():
     agent = CitizenAgent("citizen_agent@localhost", "citizen_agent_password")
     await agent.start(auto_register=True)
@@ -44,6 +53,7 @@ async def main():
     await spade.wait_until_finished(agent)
 
     await agent.stop()
+
 
 if __name__ == "__main__":
     spade.run(main())

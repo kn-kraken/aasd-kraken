@@ -7,6 +7,11 @@ from spade.message import Message
 import asyncio
 import json
 
+DEFAULT_METADATA = {
+    "language": "JSON",
+    "ontology": "kraken",
+}
+
 
 class FutureTenantAgent(Agent):
     class RegisterRental(OneShotBehaviour):
@@ -17,6 +22,7 @@ class FutureTenantAgent(Agent):
                 metadata={
                     "performative": "inform",
                     "conversation-id": "register-rental",
+                    **DEFAULT_METADATA,
                 },
                 body=json.dumps(
                     {
@@ -49,13 +55,9 @@ class FutureTenantAgent(Agent):
                     metadata={
                         "performative": "inform",
                         "conversation-id": "bid",
+                        **DEFAULT_METADATA,
                     },
-                    body=json.dumps(
-                        {
-                            "offer_id": offer_id,
-                            "amount": 99990
-                        }
-                    ),
+                    body=json.dumps({"offer_id": offer_id, "amount": 99990}),
                 )
             )
 
@@ -81,7 +83,10 @@ class FutureTenantAgent(Agent):
 
             # TODO: show popup on frontend
 
-        metadata = {"conversation-id": "auction-stop"}
+        metadata = {
+            "conversation-id": "auction-stop",
+            **DEFAULT_METADATA,
+        }
 
     class ConfirmationRequest(CyclicBehaviour):
         async def run(self):
@@ -103,19 +108,19 @@ class FutureTenantAgent(Agent):
                     metadata={
                         "performative": "inform",
                         "conversation-id": "confirmation-response",
+                        **DEFAULT_METADATA,
                     },
                     body=json.dumps(
-                        {
-                            "offer_id": offer_id,
-                            "confirmed": True # TODO: set it in FE
-                        }
+                        {"offer_id": offer_id, "confirmed": True}  # TODO: set it in FE
                     ),
                 )
             )
 
+        metadata = {
+            "conversation-id": "confirmation-request",
+            **DEFAULT_METADATA,
+        }
 
-        metadata = {"conversation-id": "confirmation-request"}
-    
     class AuctionLost(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=20)
@@ -125,7 +130,10 @@ class FutureTenantAgent(Agent):
 
             # TODO: show popup on frontend
 
-        metadata = {"conversation-id": "auction-lost"}
+        metadata = {
+            "conversation-id": "auction-lost",
+            **DEFAULT_METADATA,
+        }
 
     async def setup(self):
         print("FutureTenantAgent started")

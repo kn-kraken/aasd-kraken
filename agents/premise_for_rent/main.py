@@ -6,6 +6,11 @@ from spade.message import Message
 from spade.template import Template
 import json
 
+DEFAULT_METADATA = {
+    "language": "JSON",
+    "ontology": "kraken",
+}
+
 
 class PremiseForRentAgent(Agent):
     class RentalOffer(OneShotBehaviour):
@@ -16,6 +21,7 @@ class PremiseForRentAgent(Agent):
                 metadata={
                     "performative": "inform",
                     "conversation-id": "rental-offer",
+                    **DEFAULT_METADATA,
                 },
                 body=json.dumps(
                     {
@@ -35,8 +41,11 @@ class PremiseForRentAgent(Agent):
 
             # TODO: show popup on frontend
 
-        metadata = {"conversation-id": "auction-lost"}
-    
+        metadata = {
+            "conversation-id": "auction-lost",
+            **DEFAULT_METADATA,
+        }
+
     class AuctionCompleted(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=20)
@@ -46,7 +55,10 @@ class PremiseForRentAgent(Agent):
 
             # TODO: show popup on frontend
 
-        metadata = {"conversation-id": "auction-completed"}
+        metadata = {
+            "conversation-id": "auction-completed",
+            **DEFAULT_METADATA,
+        }
 
     async def setup(self):
         print("PremiseForRentAgent started")
