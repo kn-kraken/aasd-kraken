@@ -133,7 +133,7 @@ class HubAgent(Agent):
                 ]
 
                 if (
-                    len(matching_requests) > 1
+                    len(matching_requests) >= 1
                     and str(offer_id) not in self.agent.active_auctions
                 ):
                     # Create new auction
@@ -183,7 +183,7 @@ class HubAgent(Agent):
                 and request.min_price <= offer.starting_price <= request.max_price
             ]
 
-            if len(matching_requests) > 1:
+            if len(matching_requests) >= 1:
                 auction = Auction(
                     offer=offer,
                     bids=[],
