@@ -6,19 +6,20 @@ import json
 
 
 class PremiseForRentAgent(Agent):
-    class OpenOfferRequest(OneShotBehaviour):
+    class RegisterRental(OneShotBehaviour):
         async def run(self):
-            print("OpenOfferRequest running")
+            print("RegisterRental running")
             msg = Message(
                 to="hub_agent@localhost",
                 metadata={
-                    "performative": "propose",
-                    "conversation_id ": "OpenOfferRequest",
+                    "performative": "inform",
+                    "conversation-id": "register-rental",
                 },
                 body=json.dumps(
                     {
-                        "price": 100,
-                        "location": "Nowowiejska 63/7",
+                        "min_price": 100,
+                        "max_price": 200,
+                        "location": [50.0, 100.0],  # TODO: lat/lon
                     }
                 ),
             )
@@ -27,7 +28,7 @@ class PremiseForRentAgent(Agent):
 
     async def setup(self):
         print("PremiseForRentAgent started")
-        self.add_behaviour(self.OpenOfferRequest())
+        self.add_behaviour(self.RegisterRental())
 
 
 async def main():
