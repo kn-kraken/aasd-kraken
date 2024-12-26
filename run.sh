@@ -1,4 +1,4 @@
 #!/bin/sh
 
-# Start server
-docker compose up localhost -d --build
+# Start server (xmpp)
+docker compose up server_hello -d --build
