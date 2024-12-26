@@ -249,6 +249,11 @@ class HubAgent(Agent):
                 )
                 await self.send(msg)
 
+        metadata = {
+            "performative": "inform",
+            "conversation-id": "bid",
+        }
+
     class AuctionManagerBehaviour(CyclicBehaviour):
         async def run(self):
             await asyncio.sleep(1)  # Check every second

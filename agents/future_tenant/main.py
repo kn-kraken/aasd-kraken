@@ -4,6 +4,7 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from spade.template import Template
 from spade.message import Message
+import asyncio
 import json
 
 
@@ -35,11 +36,41 @@ class FutureTenantAgent(Agent):
                 return
             print("AuctionStart got msg")
 
+            data = json.loads(msg.body)
+            offer_id = data["offer_id"]
+
             # TODO: show popup on frontend
 
-        metadata = {
-           "conversation-id": "auction-start"
-        }    
+            # TODO: below line is a simulation, this should be oneshot connected to frontend
+            await asyncio.sleep(2)
+            await self.send(
+                Message(
+                    to="hub_agent@localhost",
+                    metadata={
+                        "performative": "inform",
+                        "conversation-id": "bid",
+                    },
+                    body=json.dumps(
+                        {
+                            "offer_id": offer_id,
+                            "amount": 99990
+                        }
+                    ),
+                )
+            )
+
+        metadata = {"conversation-id": "auction-start"}
+
+    class OutbidNotification(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("OutbidNotification got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {"conversation-id": "outbid-notification"}
 
     async def setup(self):
         print("FutureTenantAgent started")
