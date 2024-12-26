@@ -25,7 +25,6 @@ class PremiseForRentAgent(Agent):
                 ),
             )
             await self.send(msg)
-            await self.agent.stop()
 
     class AuctionLost(CyclicBehaviour):
         async def run(self):
