@@ -4,6 +4,7 @@
 - offer_id: str
 - confirmed: bool
 
+<!-- DONE -->
 ## bid
 - offer_id: str
 - amount: int
@@ -29,6 +30,7 @@
 - end_time: str
 - current_highest_bid: int
 
+<!-- DONE -->
 ## outbid-notification
 - offer_id: str
 - current_highest_bid: int
