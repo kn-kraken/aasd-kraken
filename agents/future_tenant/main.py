@@ -6,19 +6,20 @@ import json
 
 
 class FutureTenantAgent(Agent):
-    class StartNegotiation(OneShotBehaviour):
+    class RegisterRental(OneShotBehaviour):
         async def run(self):
-            print("StartNegotiation running")
+            print("RegisterRental running")
             msg = Message(
                 to="hub_agent@localhost",
                 metadata={
-                    "performative": "propose",
-                    "conversation_id ": "StartNegotiation",
+                    "performative": "inform",
+                    "conversation-id": "register-rental",
                 },
                 body=json.dumps(
                     {
-                        "pole1": 100,
-                        "pole2": "pole2",
+                        "min_price": 100,
+                        "max_price": 200,
+                        "location": [50.0, 100.0],  # TODO: lat/lon
                     }
                 ),
             )
@@ -27,7 +28,7 @@ class FutureTenantAgent(Agent):
 
     async def setup(self):
         print("FutureTenantAgent started")
-        self.add_behaviour(self.StartNegotiation())
+        self.add_behaviour(self.RegisterRental())
 
 
 async def main():
