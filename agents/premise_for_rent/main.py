@@ -36,6 +36,17 @@ class PremiseForRentAgent(Agent):
             # TODO: show popup on frontend
 
         metadata = {"conversation-id": "auction-lost"}
+    
+    class AuctionCompleted(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionCompleted got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {"conversation-id": "auction-completed"}
 
     async def setup(self):
         print("PremiseForRentAgent started")
