@@ -35,16 +35,20 @@
 - offer_id: str
 - current_highest_bid: int
 
+<!-- DONE -->
 ## auction-stop
 - offer_id: str
 
+<!-- DONE -->
 ## confirmation-request
 - offer_id: str
 - bid_amount: int
 
+<!-- DONE -->
 ## auction-lost
 - offer_id: str
 
+<!-- DONE -->
 ## auction-completed
 - offer_id: str
 - final_price: int

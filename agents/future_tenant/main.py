@@ -72,6 +72,61 @@ class FutureTenantAgent(Agent):
 
         metadata = {"conversation-id": "outbid-notification"}
 
+    class AuctionStop(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionStop got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {"conversation-id": "auction-stop"}
+
+    class ConfirmationRequest(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("ConfirmationRequest got msg")
+
+            data = json.loads(msg.body)
+            offer_id = data["offer_id"]
+
+            # TODO: show popup on frontend
+
+            # TODO: below is a simulation, connect this to FE
+            await asyncio.sleep(5)
+            await self.send(
+                Message(
+                    to="hub_agent@localhost",
+                    metadata={
+                        "performative": "inform",
+                        "conversation-id": "confirmation-response",
+                    },
+                    body=json.dumps(
+                        {
+                            "offer_id": offer_id,
+                            "confirmed": True # TODO: set it in FE
+                        }
+                    ),
+                )
+            )
+
+
+        metadata = {"conversation-id": "confirmation-request"}
+    
+    class AuctionLost(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionLost got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {"conversation-id": "auction-lost"}
+
     async def setup(self):
         print("FutureTenantAgent started")
         self.add_behaviour(self.RegisterRental())

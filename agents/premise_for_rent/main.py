@@ -1,7 +1,9 @@
+import inspect
 import spade
 from spade.agent import Agent
-from spade.behaviour import OneShotBehaviour
+from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from spade.message import Message
+from spade.template import Template
 import json
 
 
@@ -25,9 +27,30 @@ class PremiseForRentAgent(Agent):
             await self.send(msg)
             await self.agent.stop()
 
+    class AuctionLost(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionLost got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {"conversation-id": "auction-lost"}
+
     async def setup(self):
         print("PremiseForRentAgent started")
         self.add_behaviour(self.RentalOffer())
+
+        for d in [
+            d
+            for d in dir(self)
+            if inspect.isclass(getattr(self, d)) and d != "__class__"
+        ]:
+            attr = getattr(self, d)
+            if issubclass(attr, CyclicBehaviour) and hasattr(attr, "metadata"):
+                template = Template(metadata=attr.metadata)
+                self.add_behaviour(attr(), template)
 
 
 async def main():

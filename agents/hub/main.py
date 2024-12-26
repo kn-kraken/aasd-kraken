@@ -395,6 +395,11 @@ class HubAgent(Agent):
                 auction.status = "completed"
                 del self.agent.active_auctions[offer_id]
 
+        metadata={
+            "performative": "inform",
+            "conversation-id": "confirmation-response",
+        },
+
     async def setup(self):
         print("HubAgent started")
 
