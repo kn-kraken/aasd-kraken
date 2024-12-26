@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import asyncio
-
+import uuid
 
 @dataclass
 class RentalOffer:
+    agent_jid: str
     starting_price: int
     location: tuple[float, float]
 
@@ -48,7 +49,7 @@ class Auction:
     confirmation_deadline: Optional[datetime] = None
 
     def extend_duration(self):
-        new_end_time = datetime.now() + timedelta(minutes=5)
+        new_end_time = datetime.now() + timedelta(seconds=5)
         if new_end_time > self.end_time:
             self.end_time = new_end_time
 
@@ -91,6 +92,7 @@ class HubAgent(Agent):
                     <= auction.offer.starting_price
                     <= request.max_price
                 ):
+                    auction.bids.append(Bid(bidder_jid=request.agent_jid, amount=auction.offer.starting_price, timestamp=datetime.now()))
                     # Notify the requester about the existing auction
                     msg = spade.message.Message(
                         to=request.agent_jid,
@@ -140,13 +142,14 @@ class HubAgent(Agent):
                     auction = Auction(
                         offer=offer,
                         bids=[],
-                        end_time=datetime.now() + timedelta(minutes=60),
+                        end_time=datetime.now() + timedelta(seconds=60),
                         status="bidding",
                     )
                     self.agent.active_auctions[str(offer_id)] = auction
 
                     # Notify all matching requesters about the new auction
                     for req in matching_requests:
+                        auction.bids.append(Bid(bidder_jid=req.agent_jid, amount=offer.starting_price, timestamp=datetime.now()))
                         msg = spade.message.Message(
                             to=req.agent_jid,
                             metadata={"conversation-id": "auction-start"},
@@ -173,8 +176,8 @@ class HubAgent(Agent):
                 return
 
             data = json.loads(msg.body)
-            offer = RentalOffer(**data)
-            offer_id = str(msg.sender)
+            offer = RentalOffer(**data, agent_jid=str(msg.sender))
+            offer_id = str(uuid.uuid4())
 
             matching_requests = [
                 request
@@ -187,13 +190,14 @@ class HubAgent(Agent):
                 auction = Auction(
                     offer=offer,
                     bids=[],
-                    end_time=datetime.now() + timedelta(minutes=60),
+                    end_time=datetime.now() + timedelta(seconds=60),
                     status="bidding",
                 )
                 self.agent.active_auctions[offer_id] = auction
 
                 # Notify all matching requesters about the auction
                 for request in matching_requests:
+                    auction.bids.append(Bid(bidder_jid=request.agent_jid, amount=offer.starting_price, timestamp=datetime.now()))
                     msg = spade.message.Message(
                         to=request.agent_jid,
                         metadata={"conversation-id": "auction-start"},
@@ -286,7 +290,7 @@ class HubAgent(Agent):
                     winning_bids = auction.get_winning_bids()
                     if winning_bids:
                         auction.current_confirming_bidder = winning_bids[0].bidder_jid
-                        auction.confirmation_deadline = now + timedelta(minutes=20)
+                        auction.confirmation_deadline = now + timedelta(seconds=20)
 
                         # Ask for confirmation
                         msg = spade.message.Message(
@@ -321,7 +325,7 @@ class HubAgent(Agent):
                         auction.current_confirming_bidder = winning_bids[
                             current_index + 1
                         ].bidder_jid
-                        auction.confirmation_deadline = now + timedelta(minutes=20)
+                        auction.confirmation_deadline = now + timedelta(seconds=20)
 
                         msg = spade.message.Message(
                             to=auction.current_confirming_bidder,
@@ -384,7 +388,7 @@ class HubAgent(Agent):
 
                 # Notify seller
                 msg = spade.message.Message(
-                    to=offer_id,
+                    to=auction.offer.agent_jid,
                     metadata={"conversation-id": "auction-completed"},
                     body=json.dumps(
                         {"offer_id": offer_id, "final_price": winner_bid.amount}
@@ -402,6 +406,8 @@ class HubAgent(Agent):
 
     async def setup(self):
         print("HubAgent started")
+
+        self.add_behaviour(self.AuctionManagerBehaviour())
 
         for d in [
             d
