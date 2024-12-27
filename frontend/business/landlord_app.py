@@ -2,6 +2,7 @@ import flet as ft
 from geopy.geocoders import Nominatim
 import sys
 import os
+import asyncio
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 from system_data import SERVICE_OPTIONS
