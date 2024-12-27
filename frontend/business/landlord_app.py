@@ -426,4 +426,6 @@ def main(page: ft.Page):
         ])
     )
 
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 ft.app(target=main)

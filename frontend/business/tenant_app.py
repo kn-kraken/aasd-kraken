@@ -2,6 +2,7 @@ import flet as ft
 from geopy.geocoders import Nominatim
 import sys
 import os
+import asyncio
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 from system_data import SERVICE_OPTIONS
@@ -223,7 +224,7 @@ def main(page: ft.Page):
         min_price.value = ""
         max_price.value = ""
         description.value = ""
-        service_options_dropdown.selected_options = []
+        service_options_dropdown.value = []
 
         page.update()
 
@@ -263,4 +264,6 @@ def main(page: ft.Page):
         ])
     )
 
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 ft.app(target=main)
