@@ -2,18 +2,32 @@ import flet as ft
 from geopy.geocoders import Nominatim
 import sys
 import os
+import nest_asyncio
 import asyncio
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from agents.premise_for_rent.main import PremiseForRentAgentInterface, RentalOfferDetails
 from system_data import SERVICE_OPTIONS
 SERVICE_OPTIONS = [opt for opt in SERVICE_OPTIONS if opt != "Other"]
+
 
 def main(page: ft.Page):
     page.title = "Apartment Listing Application"
     page.window.width = 1000
     page.window.height = 1000
     page.scroll = "auto"
-    
+    nest_asyncio.apply()
+
+    event_queue = asyncio.Queue()
+    agent = PremiseForRentAgentInterface(event_queue)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.create_task(agent.run())
+
+
     def change_tab(e):
         tabs.selected_index = e.control.selected_index
         tab_content.content = tabs_content[e.control.selected_index]
@@ -38,12 +52,12 @@ def main(page: ft.Page):
         listings,
     ], scroll="auto")
 
-    
+
     coordinates = {
         "lat": 52.2297700,
         "lng": 21.0117800
     }
-    
+
     # Initialize geocoder
     geolocator = Nominatim(user_agent="my_app")
 
@@ -63,24 +77,24 @@ def main(page: ft.Page):
 
     # Form elements
     seller_name = ft.TextField(
-        label="Seller Full Name *", 
+        label="Seller Full Name *",
         hint_text="Enter your full name",
         width=400,
         on_change=lambda _: validate_name()
     )
 
     street = ft.TextField(
-        label="Street Address or Location Name", 
-        hint_text="Enter street name and number", 
+        label="Street Address or Location Name",
+        hint_text="Enter street name and number",
         width=400,
     )
-    
+
     local_number = ft.TextField(
         label="Apartment Number (optional)",
         hint_text="Enter apartment/local number",
         width=190,
     )
-    
+
     city = ft.TextField(
         label="City (optional)",
         hint_text="Enter city",
@@ -92,25 +106,25 @@ def main(page: ft.Page):
         width=400,
         read_only=True
     )
-    
+
     verified_apartment = ft.TextField(
         label="Apartment",
         width=240,
         read_only=True
     )
-    
+
     verified_voivodeship = ft.TextField(
         label="Voivodeship",
         width=240,
         read_only=True
     )
-    
+
     verified_postal = ft.TextField(
         label="Postal Code",
         width=190,
         read_only=True
     )
-    
+
     verified_country = ft.TextField(
         label="Country",
         width=190,
@@ -126,9 +140,9 @@ def main(page: ft.Page):
     )
 
     price_lower = ft.TextField(
-        label="Price (USD) *", 
-        hint_text="Enter the price", 
-        width=190, 
+        label="Price (USD) *",
+        hint_text="Enter the price",
+        width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
         on_change=lambda _: validate_price()
     )
@@ -174,11 +188,11 @@ def main(page: ft.Page):
         padding=10,
         width=400,
     )
-    
+
     description = ft.TextField(
-        label="Description (optional)", 
-        hint_text="Enter a brief description", 
-        multiline=True, 
+        label="Description (optional)",
+        hint_text="Enter a brief description",
+        multiline=True,
         width=400
     )
 
@@ -188,8 +202,8 @@ def main(page: ft.Page):
     ])
 
     submit_button = ft.ElevatedButton(
-        "Add Listing", 
-        on_click=lambda _: submit_form(), 
+        "Add Listing",
+        on_click=lambda _: submit_form(),
         width=200,
         disabled=True
     )
@@ -276,7 +290,7 @@ def main(page: ft.Page):
         address_valid = validate_address()
         price_valid = validate_price()
         area_valid = validate_area()
-        
+
         # Check if at least one checkbox is selected
         checkbox_valid = False
         for row in blacklist_container.content.controls[1].content.controls:
@@ -287,7 +301,7 @@ def main(page: ft.Page):
                         break
             if checkbox_valid:
                 break
-        
+
         submit_button.disabled = not all([name_valid, address_valid, price_valid, area_valid, checkbox_valid])
         page.update()
 
@@ -298,40 +312,40 @@ def main(page: ft.Page):
                 address_parts.append(street.value)
             if city.value:
                 address_parts.append(city.value)
-            
+
             full_address = ", ".join(address_parts)
-            
+
             if full_address:
                 location_data = geolocator.geocode(full_address)
                 if location_data:
                     coordinates["lat"] = location_data.latitude
                     coordinates["lng"] = location_data.longitude
-                    
+
                     address_components = location_data.address.split(", ")
                     if(not address_components[0][0].isdigit() and address_components[1][0].isdigit()):
                         address_components = address_components[1:]
-                    
+
                     verified_street.value = ""
                     verified_apartment.value = local_number.value if local_number.value else ""
                     verified_voivodeship.value = ""
                     verified_postal.value = ""
                     verified_country.value = ""
-                    
+
                     if address_components[0]:
                         verified_street.value = address_components[1] + " " + address_components[0]
-                    
+
                     for comp in address_components:
                         if "województwo" in comp.lower():
                             verified_voivodeship.value = comp
                             break
-                    
+
                     for comp in address_components[1:]:
                         if any(c.isdigit() for c in comp) and len(comp) <= 10:
                             verified_postal.value = comp
                             break
-                    
+
                     verified_country.value = address_components[-1]
-                    
+
                     validate_form()
                     page.update()
                 else:
@@ -356,7 +370,7 @@ def main(page: ft.Page):
         address_valid = validate_address()
         price_valid = validate_price()
         area_valid = validate_area()
-        
+
         # Check if at least one checkbox is selected
         checkbox_valid = False
         checkboxes = []
@@ -379,9 +393,9 @@ def main(page: ft.Page):
             verified_country.value
         ]
         full_address = ", ".join([part for part in address_parts if part])
-        
+
         blacklisted = [cb.label for cb in checkboxes if cb.value]
-        
+
         listings.controls.append(
             ft.Card(
                 content=ft.Container(content=ft.Column([
@@ -393,6 +407,13 @@ def main(page: ft.Page):
                     ft.Text(f"Blacklisted premises: {', '.join(blacklisted)}" if blacklisted else "No blacklisted premises", size=16),
                 ], spacing=10), padding=20),
                 width=500,
+            )
+        )
+
+        agent.add_rental_offer(
+            RentalOfferDetails(
+                starting_price=float(price_lower.value),
+                location=[coordinates["lat"], coordinates["lng"]]
             )
         )
 
@@ -411,14 +432,15 @@ def main(page: ft.Page):
         area.value = ""
         for checkbox in checkboxes:
             checkbox.value = False
-        
+
         validate_form()
         page.update()
+
 
     # Main layout
     tabs.selected_index = 1
     tab_content.content = tabs_content[1]
-        
+
 
     page.add(
         ft.Column([

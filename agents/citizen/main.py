@@ -56,7 +56,11 @@ class CitizenAgent(Agent):
         self.add_behaviour(behavior)
 
 
-async def main():
+
+def run_citizen_agent(service_demand):
+    spade.run(main(service_demand))
+
+async def main(service_demand):
     agent = CitizenAgent("citizen_agent@localhost", "citizen_agent_password")
     await agent.start(auto_register=True)
     agent.add_service_demand_request(service_demand)
