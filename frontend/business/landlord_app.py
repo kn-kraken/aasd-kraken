@@ -37,12 +37,7 @@ def main(page: ft.Page):
         listings,
     ], scroll="auto")
 
-    # Create the form view (existing main_content)
     
-
-    # Create tabs content
-    
-    # Initialize map coordinates as nonlocal variables
     coordinates = {
         "lat": 52.2297700,
         "lng": 21.0117800
@@ -423,8 +418,6 @@ def main(page: ft.Page):
     tabs.selected_index = 1
     tab_content.content = tabs_content[1]
         
-    validate_form()
-    page.update()
 
     page.add(
         ft.Column([
