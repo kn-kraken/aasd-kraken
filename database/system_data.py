@@ -38,3 +38,8 @@ PREMISE_DEMAND_PRIORITY = [
 ]
 
 PREMISE_OPTIONS = []
+
+DEFAULT_METADATA = {
+    "language": "JSON",
+    "ontology": "kraken_premise_hub",
+}

@@ -1,33 +1,79 @@
+import inspect
 import spade
 from spade.agent import Agent
-from spade.behaviour import OneShotBehaviour
+from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from spade.message import Message
+from spade.template import Template
 import json
+import sys
+import os
+
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+from system_data import DEFAULT_METADATA
 
 
 class PremiseForRentAgent(Agent):
-    class OpenOfferRequest(OneShotBehaviour):
+    class RentalOffer(OneShotBehaviour):
         async def run(self):
-            print("OpenOfferRequest running")
+            print("RentalOffer running")
             msg = Message(
                 to="hub_agent@localhost",
                 metadata={
-                    "performative": "propose",
-                    "conversation_id ": "OpenOfferRequest",
+                    "performative": "inform",
+                    "conversation-id": "rental-offer",
+                    **DEFAULT_METADATA,
                 },
                 body=json.dumps(
                     {
-                        "price": 100,
-                        "location": "Nowowiejska 63/7",
+                        "starting_price": 120,
+                        "location": [50.001, 100.0],  # TODO: lat/lon
                     }
                 ),
             )
             await self.send(msg)
-            await self.agent.stop()
+
+    class AuctionLost(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionLost got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {
+            "conversation-id": "auction-lost",
+            **DEFAULT_METADATA,
+        }
+
+    class AuctionCompleted(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+            print("AuctionCompleted got msg")
+
+            # TODO: show popup on frontend
+
+        metadata = {
+            "conversation-id": "auction-completed",
+            **DEFAULT_METADATA,
+        }
 
     async def setup(self):
         print("PremiseForRentAgent started")
-        self.add_behaviour(self.OpenOfferRequest())
+        self.add_behaviour(self.RentalOffer())
+
+        for d in [
+            d
+            for d in dir(self)
+            if inspect.isclass(getattr(self, d)) and d != "__class__"
+        ]:
+            attr = getattr(self, d)
+            if issubclass(attr, CyclicBehaviour) and hasattr(attr, "metadata"):
+                template = Template(metadata=attr.metadata)
+                self.add_behaviour(attr(), template)
 
 
 async def main():
