@@ -1,32 +1,43 @@
 import flet as ft
 from geopy.geocoders import Nominatim
 import sys
+import threading
 import os
-import nest_asyncio
 import asyncio
+import spade
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from agents.premise_for_rent.main import PremiseForRentAgentInterface, RentalOfferDetails
 from system_data import SERVICE_OPTIONS
+from agents.premise_for_rent.main import RentalOfferDetails, PremiseForRentAgentInterface
 SERVICE_OPTIONS = [opt for opt in SERVICE_OPTIONS if opt != "Other"]
 
 
-def main(page: ft.Page):
+event_queue = asyncio.Queue()
+agent = PremiseForRentAgentInterface(event_queue)
+
+
+async def main(page: ft.Page):
     page.title = "Apartment Listing Application"
     page.window.width = 1000
     page.window.height = 1000
     page.scroll = "auto"
-    nest_asyncio.apply()
 
-    event_queue = asyncio.Queue()
-    agent = PremiseForRentAgentInterface(event_queue)
+    async def poll_events():
+        while True:
+            print("Polling events")
+            event = await event_queue.get()
+            print(f"Got event {event}")
+            """ match event.type:
+                case "auction-lost":
+                    page.snack_bar = ft.SnackBar(ft.Text(event.agent))
+                case "auction-completed":
+                    page.snack_bar = ft.SnackBar(ft.Text("Auction completed")) """
+            page.snack_bar = ft.SnackBar(ft.Text(f"Got event {event}"))
+            page.snack_bar.open = True
+            page.update()
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    loop.create_task(agent.run())
-
+    asyncio.create_task(poll_events())
 
     def change_tab(e):
         tabs.selected_index = e.control.selected_index
@@ -410,12 +421,12 @@ def main(page: ft.Page):
             )
         )
 
-        agent.add_rental_offer(
-            RentalOfferDetails(
-                starting_price=float(price_lower.value),
-                location=[coordinates["lat"], coordinates["lng"]]
-            )
+        details = RentalOfferDetails(
+            starting_price=float(price_lower.value),
+            location=[coordinates["lat"], coordinates["lng"]]
         )
+
+        agent.add_rental_offer(details)
 
         # Clear form
         street.value = ""
@@ -436,7 +447,6 @@ def main(page: ft.Page):
         validate_form()
         page.update()
 
-
     # Main layout
     tabs.selected_index = 1
     tab_content.content = tabs_content[1]
@@ -449,6 +459,10 @@ def main(page: ft.Page):
         ])
     )
 
+
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-ft.app(target=main)
+
+if __name__ == "__main__":
+    agent.start()
+    asyncio.run(ft.app_async(target=main))

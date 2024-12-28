@@ -21,7 +21,7 @@ def main(page: ft.Page):
         "lat": 52.2297700,
         "lng": 21.0117800
     }
-    
+
     # Initialize geocoder
     geolocator = Nominatim(user_agent="citizen_app")
 
@@ -30,33 +30,33 @@ def main(page: ft.Page):
     street_number = ft.TextField(label="Street Number", hint_text="Number", width=90)
     postal_code = ft.TextField(label="Postal Code (optional)", hint_text="Enter postal code", width=150)
     city = ft.TextField(label="City", hint_text="Enter city", width=190)
-    
+
     # Verified address fields
     verified_address = ft.TextField(
-        label="Verified Address", 
-        width=600, 
+        label="Verified Address",
+        width=600,
         read_only=True,
         multiline=True,
         min_lines=2,
         text_size=16
     )
-    
+
     service_input = ft.Dropdown(
         label="Service",
         options=[ft.dropdown.Option(name) for name in SERVICE_OPTIONS],
         width=400
     )
-    
+
     priority_input = ft.Dropdown(
         label="Priority",
         options=[ft.dropdown.Option(priority) for priority in PREMISE_DEMAND_PRIORITY],
         width=400
     )
-    
+
     description_input = ft.TextField(
-        label="Request Description", 
-        multiline=True, 
-        min_lines=3, 
+        label="Request Description",
+        multiline=True,
+        min_lines=3,
         max_lines=5,
         width=400
     )
@@ -90,9 +90,9 @@ def main(page: ft.Page):
                 address_parts.append(postal_code.value)
             if city.value:
                 address_parts.append(city.value)
-            
+
             full_address = ", ".join(address_parts)
-            
+
             if full_address:
                 location_data = geolocator.geocode(full_address)
                 if location_data:
@@ -119,11 +119,11 @@ def main(page: ft.Page):
 
     def submit_form():
         service_demand = ServiceDemand(
-            localization=[coordinates["lat"], coordinates["lng"]], 
-            service_type=service_input.value, 
+            localization=[coordinates["lat"], coordinates["lng"]],
+            service_type=service_input.value,
             priority=priority_input.value
         )
-        
+
         run_citizen_agent(service_demand)
 
         # Clear all fields after successful submission
@@ -136,7 +136,7 @@ def main(page: ft.Page):
         service_input.value = None
         priority_input.value = None
         description_input.value = ""
-        
+
         text = ft.Text("Thank you for submitting your request!")
         text.padding = ft.padding.all(20)
         page.add(text)

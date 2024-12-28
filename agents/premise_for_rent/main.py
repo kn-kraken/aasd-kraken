@@ -7,6 +7,8 @@ from spade.message import Message
 from spade.template import Template
 import json
 import sys
+import threading
+import asyncio
 import os
 
 
@@ -54,7 +56,6 @@ class PremiseForRentAgent(Agent):
                 return
             print("AuctionLost got msg")
 
-            self.agent.event_queue.put({"type": "AuctionCompleted", "data": msg.body})
 
         metadata = {
             "conversation-id": "auction-lost",
@@ -64,12 +65,15 @@ class PremiseForRentAgent(Agent):
     class AuctionCompleted(CyclicBehaviour):
         async def run(self):
             print("AuctionCompleted running")
+            await self.agent.event_queue.put({"type": "auction-completed", "agent": self.agent.jid})
             msg = await self.receive(timeout=20)
             if not msg:
                 return
             print("AuctionCompleted got msg")
 
+
             # TODO: show popup on frontend
+
 
         metadata = {
             "conversation-id": "auction-completed",
@@ -96,23 +100,30 @@ class PremiseForRentAgent(Agent):
 
 
 class PremiseForRentAgentInterface:
-    def __init__(self, event_queue):
+    def __init__(self, name, event_queue):
+        self.event_queue = event_queue
+        self.loop = asyncio.new_event_loop()
         self.agent = PremiseForRentAgent(
-            "premise_for_rent_agent@localhost", "premise_for_rent_agent_password", event_queue
+            "premise_for_rent_agent@localhost",
+            "premise_for_rent_agent_password",
+            self.event_queue
         )
+        self.thread = threading.Thread(target=self._thread_main, daemon=True)
 
-    async def _start(self):
-        await self.agent.start(auto_register=True)
-        await spade.wait_until_finished(self.agent)
-        print("Agents finished")
+    def start(self):
+        self.thread.start()
 
+    def _thread_main(self):
+        asyncio.set_event_loop(self.loop)
 
-    async def run(self):
-        await spade.run(self._start())
+        async def start_agent():
+            await self.agent.start(auto_register=True)
+            await spade.wait_until_finished(self.agent)
 
-    def add_rental_offer(self, rental_offer_details: RentalOfferDetails):
-        print(rental_offer_details)
-        self.agent.add_service_demand_request(rental_offer_details)
+        self.loop.run_until_complete(start_agent())
+
+    def add_rental_offer(self, rental_offer_details):
+        self.loop.call_soon_threadsafe(lambda: self.agent.add_service_demand_request(rental_offer_details))
 
 
 
