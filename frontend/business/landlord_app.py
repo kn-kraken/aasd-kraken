@@ -5,16 +5,17 @@ import threading
 import os
 import asyncio
 import spade
+import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from system_data import SERVICE_OPTIONS
-from agents.premise_for_rent.main import RentalOfferDetails, PremiseForRentAgentInterface
+from agents.premise_for_rent.main import RentalOfferDetails, PremiseForRentInterface
 SERVICE_OPTIONS = [opt for opt in SERVICE_OPTIONS if opt != "Other"]
 
 
 event_queue = asyncio.Queue()
-agents = PremiseForRentAgentInterface(event_queue)
+agents = PremiseForRentInterface(event_queue)
 
 
 async def main(page: ft.Page):
@@ -427,7 +428,7 @@ async def main(page: ft.Page):
             location=[coordinates["lat"], coordinates["lng"]]
         )
 
-        agents.add_rental_offer(details)
+        agents.add_rental_offer(f"rentaloffer_{uuid.uuid4().hex[:8]}", details)
 
         # Clear form
         street.value = ""

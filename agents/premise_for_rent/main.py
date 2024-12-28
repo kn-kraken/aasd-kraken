@@ -56,6 +56,7 @@ class PremiseForRentAgent(Agent):
             if not msg:
                 return
             print("AuctionLost got msg")
+            await self.agent.event_queue.put({"type": "auction-lost", "agent": self.agent.jid})
 
 
         metadata = {
@@ -66,11 +67,12 @@ class PremiseForRentAgent(Agent):
     class AuctionCompleted(CyclicBehaviour):
         async def run(self):
             print("AuctionCompleted running")
-            await self.agent.event_queue.put({"type": "auction-completed", "agent": self.agent.jid})
             msg = await self.receive(timeout=20)
             if not msg:
                 return
+
             print("AuctionCompleted got msg")
+            await self.agent.event_queue.put({"type": "auction-completed", "agent": self.agent.jid})
 
 
             # TODO: show popup on frontend
@@ -100,14 +102,14 @@ class PremiseForRentAgent(Agent):
         self.add_behaviour(behavior)
 
 
-class PremiseForRentAgentInterface:
+class PremiseForRentInterface:
 
     def __init__(self, event_queue):
         self.event_queue = event_queue
         self.agents = []
 
-    def add_rental_offer(self, rental_offer_details: RentalOfferDetails):
-        unique_jid_localpart = f"rentaloffer_{uuid.uuid4().hex[:8]}"
+    def add_rental_offer(self, agent_id, rental_offer_details: RentalOfferDetails):
+        unique_jid_localpart = agent_id
         new_jid = f"{unique_jid_localpart}@localhost"
         new_password = "some_password"
         new_agent = PremiseForRentAgent(new_jid, new_password, self.event_queue)
@@ -128,10 +130,7 @@ class PremiseForRentAgentInterface:
             "jid": new_jid,
         })
 
-        def schedule_behavior():
-            new_agent.add_service_demand_request(rental_offer_details)
-
-        new_loop.call_soon_threadsafe(schedule_behavior)
+        new_loop.call_soon_threadsafe(lambda: new_agent.add_service_demand_request(rental_offer_details))
 
 
 async def main():
