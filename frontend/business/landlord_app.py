@@ -29,15 +29,11 @@ async def main(page: ft.Page):
             print("Polling events")
 
             event = await event_queue.get()
-            print(f"Got event {event}")
-            """ match event.type:
-                case "auction-lost":
-                    page.snack_bar = ft.SnackBar(ft.Text(event.agent))
+
+            match event.type:
                 case "auction-completed":
-                    page.snack_bar = ft.SnackBar(ft.Text("Auction completed")) """
-            page.snack_bar = ft.SnackBar(ft.Text(f"Got event {event}"))
-            page.snack_bar.open = True
-            page.update()
+                    final_price = event.data["final_price"]
+                    page.snack_bar = ft.SnackBar(ft.Text(f"{event.agent} completed with final price: {final_price}"))
 
     asyncio.create_task(poll_events())
 

@@ -194,6 +194,7 @@ class HubAgent(Agent):
             msg = await self.receive(timeout=20)
             if not msg:
                 return
+            print("RegisterRentalOfferRecvBhv got msg")
 
             data = json.loads(msg.body)
             offer = RentalOffer(**data, agent_jid=str(msg.sender))

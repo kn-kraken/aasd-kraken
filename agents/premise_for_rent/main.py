@@ -50,33 +50,17 @@ class PremiseForRentAgent(Agent):
             )
             await self.send(msg)
 
-    class AuctionLost(CyclicBehaviour):
-        async def run(self):
-            msg = await self.receive(timeout=20)
-            if not msg:
-                return
-            print("AuctionLost got msg")
-            await self.agent.event_queue.put({"type": "auction-lost", "agent": self.agent.jid})
-
-
-        metadata = {
-            "conversation-id": "auction-lost",
-            **DEFAULT_METADATA,
-        }
-
     class AuctionCompleted(CyclicBehaviour):
         async def run(self):
             print("AuctionCompleted running")
             msg = await self.receive(timeout=20)
             if not msg:
                 return
+            data = json.loads(msg.body)
+            final_price = data["final_price"]
 
             print("AuctionCompleted got msg")
-            await self.agent.event_queue.put({"type": "auction-completed", "agent": self.agent.jid})
-
-
-            # TODO: show popup on frontend
-
+            await self.agent.event_queue.put({"type": "auction-completed", "data": {final_price}, "agent": self.agent.jid })
 
         metadata = {
             "conversation-id": "auction-completed",

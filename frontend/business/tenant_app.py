@@ -3,16 +3,51 @@ from geopy.geocoders import Nominatim
 import sys
 import os
 import asyncio
+import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from system_data import SERVICE_OPTIONS
+from agents.future_tenant.main import FutureTenantInterface, TenantOfferDetails
 
 
-def main(page: ft.Page):
+event_queue = asyncio.Queue()
+agents = FutureTenantInterface(event_queue)
+
+
+async def main(page: ft.Page):
     page.title = "Rental Offer Application"
     page.window.width = 1000
     page.window.height = 1000
     page.scroll = "auto"
+
+    async def poll_events():
+        while True:
+            print("Polling events")
+
+            event = await event_queue.get()
+            print(f"Got event {event}")
+            match event.type:
+                case "auction-start":
+                    page.snack_bar = ft.SnackBar(content=ft.Text("Auction started!"))
+                    # TODO: show modal and run agents.add_bid_bhv
+                case "outbid-notification":
+                    current_highest_bid = event.data["current_highest_bid"]
+                    page.snack_bar = ft.SnackBar(content=ft.Text("You have been outbid with {current_highest_bid}!"))
+                case "auction-stop":
+                    page.snack_bar = ft.SnackBar(content=ft.Text("Auction ended!"))
+                case "confirmation-request":
+                    # "data": {offer_id, bid_amount}
+                    offer_id = event.data["offer_id"]
+                    bid_amount = event.data["bid_amount"]
+                    page.snack_bar = ft.SnackBar(content=ft.Text(f"You have won {event.agent} the auction with {bid_amount}!"))
+                    # TODO: show modal and run agents.add_confirm_bhv
+                case "auction-lost":
+                    page.snack_bar = ft.SnackBar(content=ft.Text("You have lost the auction!"))
+
+
+
+    asyncio.create_task(poll_events())
 
     def change_tab(e):
         tabs.selected_index = e.control.selected_index
@@ -63,15 +98,15 @@ def main(page: ft.Page):
         page.update()
 
     tenant_name = ft.TextField(
-        label="Your Full Name *", 
+        label="Your Full Name *",
         hint_text="Enter your full name",
         width=400,
         on_change=lambda _: validate_form(),
     )
 
     street = ft.TextField(
-        label="Street Address or Location Name *", 
-        hint_text="Enter street name and number", 
+        label="Street Address or Location Name *",
+        hint_text="Enter street name and number",
         width=400,
         on_change=lambda _: validate_form(),
     )
@@ -90,17 +125,17 @@ def main(page: ft.Page):
     )
 
     min_price = ft.TextField(
-        label="Minimum Price (USD) *", 
-        hint_text="Enter the minimum price", 
-        width=190, 
+        label="Minimum Price (USD) *",
+        hint_text="Enter the minimum price",
+        width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
         on_change=lambda _: validate_form(),
     )
 
     max_price = ft.TextField(
-        label="Maximum Price (USD) *", 
-        hint_text="Enter the maximum price", 
-        width=190, 
+        label="Maximum Price (USD) *",
+        hint_text="Enter the maximum price",
+        width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
         on_change=lambda _: validate_form(),
     )
@@ -124,9 +159,9 @@ def main(page: ft.Page):
     )
 
     description = ft.TextField(
-        label="Description (optional)", 
-        hint_text="Enter a brief description", 
-        multiline=True, 
+        label="Description (optional)",
+        hint_text="Enter a brief description",
+        multiline=True,
         width=400
     )
 
@@ -136,8 +171,8 @@ def main(page: ft.Page):
     ])
 
     submit_button = ft.ElevatedButton(
-        "Submit Offer", 
-        on_click=lambda _: submit_offer(), 
+        "Submit Offer",
+        on_click=lambda _: submit_offer(),
         width=200,
         disabled=True,
     )
@@ -216,6 +251,14 @@ def main(page: ft.Page):
             )
         )
 
+        details = TenantOfferDetails(
+            min_price=float(min_price.value),
+            max_price=float(max_price.value),
+            location=(coordinates["lat"], coordinates["lng"]),
+        )
+
+        agents.register_tenant(f"tenant_{uuid.uuid4().hex[:8]}", details)
+
         # Clear form
         tenant_name.value = ""
         street.value = ""
@@ -266,4 +309,6 @@ def main(page: ft.Page):
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-ft.app(target=main)
+
+if __name__ == "__main__":
+    asyncio.run(ft.app_async(target=main))
