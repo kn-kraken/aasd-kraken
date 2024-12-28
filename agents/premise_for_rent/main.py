@@ -9,6 +9,7 @@ import json
 import sys
 import threading
 import asyncio
+import uuid
 import os
 
 
@@ -100,31 +101,37 @@ class PremiseForRentAgent(Agent):
 
 
 class PremiseForRentAgentInterface:
-    def __init__(self, name, event_queue):
+
+    def __init__(self, event_queue):
         self.event_queue = event_queue
-        self.loop = asyncio.new_event_loop()
-        self.agent = PremiseForRentAgent(
-            "premise_for_rent_agent@localhost",
-            "premise_for_rent_agent_password",
-            self.event_queue
-        )
-        self.thread = threading.Thread(target=self._thread_main, daemon=True)
+        self.agents = []
 
-    def start(self):
-        self.thread.start()
+    def add_rental_offer(self, rental_offer_details: RentalOfferDetails):
+        unique_jid_localpart = f"rentaloffer_{uuid.uuid4().hex[:8]}"
+        new_jid = f"{unique_jid_localpart}@localhost"
+        new_password = "some_password"
+        new_agent = PremiseForRentAgent(new_jid, new_password, self.event_queue)
+        new_loop = asyncio.new_event_loop()
 
-    def _thread_main(self):
-        asyncio.set_event_loop(self.loop)
+        def agent_thread_main():
+            asyncio.set_event_loop(new_loop)
+            new_loop.run_until_complete(new_agent.start(auto_register=True))
+            new_loop.run_until_complete(spade.wait_until_finished(new_agent))
 
-        async def start_agent():
-            await self.agent.start(auto_register=True)
-            await spade.wait_until_finished(self.agent)
+        t = threading.Thread(target=agent_thread_main, daemon=True)
+        t.start()
 
-        self.loop.run_until_complete(start_agent())
+        self.agents.append({
+            "agent": new_agent,
+            "loop": new_loop,
+            "thread": t,
+            "jid": new_jid,
+        })
 
-    def add_rental_offer(self, rental_offer_details):
-        self.loop.call_soon_threadsafe(lambda: self.agent.add_service_demand_request(rental_offer_details))
+        def schedule_behavior():
+            new_agent.add_service_demand_request(rental_offer_details)
 
+        new_loop.call_soon_threadsafe(schedule_behavior)
 
 
 async def main():

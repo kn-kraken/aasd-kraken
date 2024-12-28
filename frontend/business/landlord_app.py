@@ -14,7 +14,7 @@ SERVICE_OPTIONS = [opt for opt in SERVICE_OPTIONS if opt != "Other"]
 
 
 event_queue = asyncio.Queue()
-agent = PremiseForRentAgentInterface(event_queue)
+agents = PremiseForRentAgentInterface(event_queue)
 
 
 async def main(page: ft.Page):
@@ -26,6 +26,7 @@ async def main(page: ft.Page):
     async def poll_events():
         while True:
             print("Polling events")
+
             event = await event_queue.get()
             print(f"Got event {event}")
             """ match event.type:
@@ -426,7 +427,7 @@ async def main(page: ft.Page):
             location=[coordinates["lat"], coordinates["lng"]]
         )
 
-        agent.add_rental_offer(details)
+        agents.add_rental_offer(details)
 
         # Clear form
         street.value = ""
@@ -464,5 +465,4 @@ if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 if __name__ == "__main__":
-    agent.start()
     asyncio.run(ft.app_async(target=main))
