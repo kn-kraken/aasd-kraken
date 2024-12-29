@@ -10,6 +10,8 @@ from typing import Dict, List, Optional
 import asyncio
 import uuid
 
+from .mapping import get_hubs
+
 DEFAULT_METADATA = {
     "language": "JSON",
     "ontology": "kraken",
@@ -18,6 +20,7 @@ DEFAULT_METADATA = {
 
 @dataclass
 class RentalOffer:
+    offer_id: str
     agent_jid: str
     starting_price: int
     location: tuple[float, float]
@@ -87,6 +90,8 @@ class HubAgent(Agent):
                 agent_jid=str(msg.sender),
             )
 
+            hubs = get_hubs(request.location)
+
             # Store the request
             self.agent.rental_requests.append(request)
 
@@ -126,30 +131,19 @@ class HubAgent(Agent):
 
             # Check for matching offers that don't have auctions yet
             matching_offers = [
-                (offer_id, offer)
-                for offer_id, offer in enumerate(self.agent.rental_offers)
+                offer
+                for offer in self.agent.rental_offers
                 if (
                     is_close(offer.location, request.location)
                     and request.min_price <= offer.starting_price <= request.max_price
-                    and str(offer_id) not in self.agent.active_auctions
+                    and offer.offer_id not in self.agent.active_auctions
                 )
             ]
 
             # Start new auctions if there are multiple requests for the same offer
-            for offer_id, offer in matching_offers:
-                matching_requests = [
-                    req
-                    for req in self.agent.rental_requests
-                    if (
-                        is_close(offer.location, req.location)
-                        and req.min_price <= offer.starting_price <= req.max_price
-                    )
-                ]
-
-                if (
-                    len(matching_requests) >= 1
-                    and str(offer_id) not in self.agent.active_auctions
-                ):
+            for offer in matching_offers:
+                offer_hubs = get_hubs(offer.location)
+                if offer_hubs[0] == str(self.agent.jid):
                     # Create new auction
                     auction = Auction(
                         offer=offer,
@@ -157,30 +151,44 @@ class HubAgent(Agent):
                         end_time=datetime.now() + timedelta(seconds=60),
                         status="bidding",
                     )
-                    self.agent.active_auctions[str(offer_id)] = auction
+                    self.agent.active_auctions[offer.offer_id] = auction
 
-                    # Notify all matching requesters about the new auction
-                    for req in matching_requests:
-                        auction.bids.append(
-                            Bid(
-                                bidder_jid=req.agent_jid,
-                                amount=offer.starting_price,
-                                timestamp=datetime.now(),
-                            )
+                    auction.bids.append(
+                        Bid(
+                            bidder_jid=request.agent_jid,
+                            amount=offer.starting_price,
+                            timestamp=datetime.now(),
                         )
-                        msg = spade.message.Message(
-                            to=req.agent_jid,
-                            metadata={"conversation-id": "auction-start"},
-                            body=json.dumps(
-                                {
-                                    "offer_id": str(offer_id),
-                                    "starting_price": offer.starting_price,
-                                    "location": offer.location,
-                                    "end_time": auction.end_time.isoformat(),
-                                }
-                            ),
-                        )
-                        await self.send(msg)
+                    )
+                    msg = spade.message.Message(
+                        to=request.agent_jid,
+                        metadata={"conversation-id": "auction-start"},
+                        body=json.dumps(
+                            {
+                                "offer_id": offer.offer_id,
+                                "starting_price": offer.starting_price,
+                                "location": offer.location,
+                                "end_time": auction.end_time.isoformat(),
+                            }
+                        ),
+                    )
+                    await self.send(msg)
+
+                dispatchers = list(set(hubs) & set(offer_hubs))
+                dispatchers.sort()
+
+                if dispatchers[0] == str(self.agent.jid):
+                    msg = spade.message.Message(
+                        to=offer_hubs[0],
+                        metadata={"conversation-id": "forward-register-rental"},
+                        body=json.dumps(
+                            {
+                                "offer_id": offer.offer_id,
+                                "agent_jid": request.agent_jid,
+                            }
+                        ),
+                    )
+                    await self.send(msg)
 
         metadata = {
             "performative": "inform",
@@ -195,8 +203,9 @@ class HubAgent(Agent):
                 return
 
             data = json.loads(msg.body)
-            offer = RentalOffer(**data, agent_jid=str(msg.sender))
-            offer_id = str(uuid.uuid4())
+            offer = RentalOffer(
+                **data, agent_jid=str(msg.sender), offer_id=str(uuid.uuid4())
+            )
 
             matching_requests = [
                 request
@@ -206,45 +215,108 @@ class HubAgent(Agent):
             ]
 
             if len(matching_requests) >= 1:
-                auction = Auction(
-                    offer=offer,
-                    bids=[],
-                    end_time=datetime.now() + timedelta(seconds=60),
-                    status="bidding",
-                )
-                self.agent.active_auctions[offer_id] = auction
+                offer_hubs = get_hubs(offer.location)
 
-                # Notify all matching requesters about the auction
-                for request in matching_requests:
-                    auction.bids.append(
-                        Bid(
-                            bidder_jid=request.agent_jid,
-                            amount=offer.starting_price,
-                            timestamp=datetime.now(),
+                if offer_hubs[0] == str(self.agent.jid):
+                    auction = Auction(
+                        offer=offer,
+                        bids=[],
+                        end_time=datetime.now() + timedelta(seconds=60),
+                        status="bidding",
+                    )
+                    self.agent.active_auctions[offer.offer_id] = auction
+
+                    # Notify all matching requesters about the auction
+                    for request in matching_requests:
+                        auction.bids.append(
+                            Bid(
+                                bidder_jid=request.agent_jid,
+                                amount=offer.starting_price,
+                                timestamp=datetime.now(),
+                            )
                         )
-                    )
-                    msg = spade.message.Message(
-                        to=request.agent_jid,
-                        metadata={
-                            "conversation-id": "auction-start",
-                            **DEFAULT_METADATA,
-                        },
-                        body=json.dumps(
-                            {
-                                "offer_id": offer_id,
-                                "starting_price": offer.starting_price,
-                                "location": offer.location,
-                                "end_time": auction.end_time.isoformat(),
-                            }
-                        ),
-                    )
-                    await self.send(msg)
+                        msg = spade.message.Message(
+                            to=request.agent_jid,
+                            metadata={
+                                "conversation-id": "auction-start",
+                                **DEFAULT_METADATA,
+                            },
+                            body=json.dumps(
+                                {
+                                    "offer_id": offer.offer_id,
+                                    "starting_price": offer.starting_price,
+                                    "location": offer.location,
+                                    "end_time": auction.end_time.isoformat(),
+                                }
+                            ),
+                        )
+                        await self.send(msg)
+                else:
+                    for request in matching_requests:
+                        dispatchers = list(
+                            set(get_hubs(request.location)) & set(offer_hubs)
+                        )
+                        dispatchers.sort()
+
+                        if dispatchers[0] == str(self.agent.jid):
+                            msg = spade.message.Message(
+                                to=offer_hubs[0],
+                                metadata={"conversation-id": "forward-register-rental"},
+                                body=json.dumps(
+                                    {
+                                        "offer_id": offer.offer_id,
+                                        "agent_jid": request.agent_jid,
+                                    }
+                                ),
+                            )
+                            await self.send(msg)
 
             self.agent.rental_offers.append(offer)
 
         metadata = {
             "performative": "inform",
             "conversation-id": "rental-offer",
+        }
+
+    class HandleForwardRegisterRental(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+
+            data = json.loads(msg.body)
+            offer_id = data["offer_id"]
+            agent_jid = data["agent_jid"]
+
+            auction = self.agent.active_auctions.get(offer_id)
+            if not auction or auction.status != "bidding":
+                return
+
+            auction.bids.append(
+                Bid(
+                    bidder_jid=agent_jid,
+                    amount=auction.offer.starting_price,
+                    timestamp=datetime.now(),
+                )
+            )
+
+            msg = spade.message.Message(
+                to=agent_jid,
+                metadata={"conversation-id": "auction-start"},
+                body=json.dumps(
+                    {
+                        "offer_id": offer_id,
+                        "starting_price": auction.offer.starting_price,
+                        "location": auction.offer.location,
+                        "end_time": auction.end_time.isoformat(),
+                    }
+                ),
+            )
+            await self.send(msg)
+
+        metadata = {
+            "performative": "inform",
+            "conversation-id": "forward-register-rental",
         }
 
     class HandleBidBehaviour(CyclicBehaviour):
@@ -454,6 +526,7 @@ class HubAgent(Agent):
         print("HubAgent started")
 
         self.add_behaviour(self.AuctionManagerBehaviour())
+        self.add_behaviour(self.HandleForwardRegisterRental())
 
         for d in [
             d
