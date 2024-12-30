@@ -21,34 +21,73 @@ async def main(page: ft.Page):
     page.window.height = 1000
     page.scroll = "auto"
 
+    state = {
+        "offers": [],
+        "current_offer_idx": 0,
+    }
+
     async def poll_events():
         while True:
             print("Polling events")
 
             event = await event_queue.get()
             print(f"Got event {event}")
-            match event.type:
+            match event["type"]:
                 case "auction-start":
                     page.snack_bar = ft.SnackBar(content=ft.Text("Auction started!"))
-                    # TODO: show modal and run agents.add_bid_bhv
-                    
+                    agent_id = event["agent"].localpart
+                    offer_id = event["data"]["offer_id"]
+
+                    for idx, offer in enumerate(state["offers"]):
+                        if offer["agent_id"] == agent_id:
+                            state["offers"][idx]["offer_id"] = offer_id
+                            break
+
+                    place_bid(idx)
+
                 case "outbid-notification":
-                    current_highest_bid = event.data["current_highest_bid"]
+                    current_highest_bid = event["data"]["current_highest_bid"]
                     page.snack_bar = ft.SnackBar(content=ft.Text("You have been outbid with {current_highest_bid}!"))
                 case "auction-stop":
                     page.snack_bar = ft.SnackBar(content=ft.Text("Auction ended!"))
                 case "confirmation-request":
-                    # "data": {offer_id, bid_amount}
-                    offer_id = event.data["offer_id"]
-                    bid_amount = event.data["bid_amount"]
-                    page.snack_bar = ft.SnackBar(content=ft.Text(f"You have won {event.agent} the auction with {bid_amount}!"))
-                    # TODO: show modal and run agents.add_confirm_bhv
+                    offer_id = event["data"]["offer_id"]
+                    bid_amount = event["data"]["bid_amount"]
+
+                    open_confirmation_modal(event["agent"].localpart, offer_id, bid_amount)
                 case "auction-lost":
                     page.snack_bar = ft.SnackBar(content=ft.Text("You have lost the auction!"))
 
-
-
     asyncio.create_task(poll_events())
+
+    def open_confirmation_modal(agent_id, offer_id, bid_amount):
+        def confirm_offer(e):
+            agents.add_confirm_bhv(agent_id, offer_id, True)
+            page.show_snack_bar(ft.SnackBar(content=ft.Text(f"Offer {agent_id} confirmed with bid {bid_amount}!")))
+            page.update()
+            dialog.open = False
+            page.update()
+
+        def cancel_offer(e):
+            agents.add_confirm_bhv(agent_id, offer_id, False)
+            dialog.open = False
+            page.update()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Confirm Offer"),
+            content=ft.Text(f"Do you want to accept this offer with bid amount {bid_amount}?"),
+            actions=[
+                ft.TextButton("Confirm", on_click=confirm_offer),
+                ft.TextButton("Cancel", on_click=cancel_offer),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        page.dialog = dialog
+        dialog.open = True
+        page.update()
+
 
     def change_tab(e):
         tabs.selected_index = e.control.selected_index
@@ -102,6 +141,7 @@ async def main(page: ft.Page):
         hint_text="Enter your full name",
         width=400,
         on_change=lambda _: validate_form(),
+        value="John Doe"
     )
 
     street = ft.TextField(
@@ -109,6 +149,7 @@ async def main(page: ft.Page):
         hint_text="Enter street name and number",
         width=400,
         on_change=lambda _: validate_form(),
+        value="Zlota 22"
     )
 
     city = ft.TextField(
@@ -116,12 +157,13 @@ async def main(page: ft.Page):
         hint_text="Enter city",
         width=190,
         on_change=lambda _: validate_form(),
+        value="Warszawa"
     )
 
     verified_address = ft.TextField(
         label="Verified Address",
         width=400,
-        read_only=True
+        read_only=True,
     )
 
     min_price = ft.TextField(
@@ -130,6 +172,7 @@ async def main(page: ft.Page):
         width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
         on_change=lambda _: validate_form(),
+        value="1"
     )
 
     max_price = ft.TextField(
@@ -138,6 +181,7 @@ async def main(page: ft.Page):
         width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
         on_change=lambda _: validate_form(),
+        value="1000000000"
     )
 
     service_options_dropdown = ft.Dropdown(
@@ -162,7 +206,8 @@ async def main(page: ft.Page):
         label="Description (optional)",
         hint_text="Enter a brief description",
         multiline=True,
-        width=400
+        width=400,
+        value="Spacious apartment in the city center"
     )
 
     location_buttons = ft.Row([
@@ -228,11 +273,42 @@ async def main(page: ft.Page):
             page.overlay.append(ft.SnackBar(content=ft.Text("Error opening map!")))
             page.update()
 
-    def place_bid(e):
-            # TODO: Implement bidding logic here
-            # This should connect to agents.add_bid_bhv
-            page.show_snack_bar(ft.SnackBar(content=ft.Text("Placing bid...")))
+    def place_bid(idx):
+        try:
+            agent_id = state["offers"][idx]["agent_id"]
+            offer_id = state["offers"][idx]["offer_id"]
+        except IndexError:
+            page.show_snack_bar(ft.SnackBar(content=ft.Text("Auction not started yet")))
+            return
+
+        bid_amount_input = ft.TextField(label="Bid Amount", autofocus=True)
+
+        def submit_bid(e):
+            bid_amount = bid_amount_input.value
+            agents.add_bid_bhv(agent_id, offer_id, int(bid_amount))
+
+            page.show_snack_bar(ft.SnackBar(content=ft.Text(f"Placing bid of {bid_amount}...")))
             page.update()
+            dialog.open = False
+            page.update()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Place Bid"),
+            content=ft.Column([
+                bid_amount_input,
+            ]),
+            actions=[
+                ft.TextButton("Submit", on_click=submit_bid),
+                ft.TextButton("Cancel", on_click=lambda e: setattr(dialog, 'open', False)),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        page.dialog = dialog
+        dialog.open = True
+        page.update()
+
 
     def submit_offer():
         if not validate_prices():
@@ -252,13 +328,13 @@ async def main(page: ft.Page):
                     ft.Text(f"Description: {description.value}", size=16),
                     ft.Text(f"Service Type: {service}" if service else "No specific services", size=16),
                     ft.Divider(),
-                    ft.Text("Auction Status", size=16, weight=ft.FontWeight.BOLD),
-                    ft.Text("Status: Waiting", size=16, color=ft.colors.GREY_700),
-                    ft.Text("Current Highest Bid: N/A", size=16),
-                    ft.Text("Your Current Bid: N/A", size=16),
+                    # ft.Text("Auction Status", size=16, weight=ft.FontWeight.BOLD),
+                    # ft.Text("Status: Waiting", size=16, color=ft.colors.GREY_700),
+                    # ft.Text("Current Highest Bid: N/A", size=16),
+                    # ft.Text("Your Current Bid: N/A", size=16),
                     ft.ElevatedButton(
                         "Place Bid",
-                        on_click=place_bid,
+                        on_click=lambda _: place_bid(state["current_offer_idx"]),
                         color=ft.colors.WHITE,
                         bgcolor=ft.colors.BLUE_400,
                         width=200
@@ -267,14 +343,17 @@ async def main(page: ft.Page):
                 width=500,
             )
         )
+        state["current_offer_idx"] += 1
 
         details = TenantOfferDetails(
             min_price=float(min_price.value),
             max_price=float(max_price.value),
             location=(coordinates["lat"], coordinates["lng"]),
         )
+        agent_id = f"tenant_{uuid.uuid4().hex[:8]}"
+        state["offers"].append({"agent_id": agent_id, "offer_id": None})
 
-        agents.register_tenant(f"tenant_{uuid.uuid4().hex[:8]}", details)
+        agents.register_tenant(agent_id, details)
 
         # Clear form fields...
         tenant_name.value = ""

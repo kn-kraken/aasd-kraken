@@ -155,7 +155,7 @@ class HubAgent(Agent):
                     auction = Auction(
                         offer=offer,
                         bids=[],
-                        end_time=datetime.now() + timedelta(seconds=60),
+                        end_time=datetime.now() + timedelta(seconds=20),
                         status="bidding",
                     )
                     self.agent.active_auctions[str(offer_id)] = auction
@@ -182,6 +182,7 @@ class HubAgent(Agent):
                             ),
                         )
                         await self.send(msg)
+                    print("New auction started")
 
         metadata = {
             "performative": "inform",

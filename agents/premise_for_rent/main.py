@@ -60,7 +60,7 @@ class PremiseForRentAgent(Agent):
             final_price = data["final_price"]
 
             print("AuctionCompleted got msg")
-            await self.agent.event_queue.put({"type": "auction-completed", "data": {final_price}, "agent": self.agent.jid })
+            await self.agent.event_queue.put({"type": "auction-completed", "data": {"final_price": final_price}, "agent": self.agent.jid })
 
         metadata = {
             "conversation-id": "auction-completed",

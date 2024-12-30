@@ -60,9 +60,9 @@ class FutureTenantAgent(Agent):
 
             data = json.loads(msg.body)
             offer_id = data["offer_id"]
-            current_highest_bid = data["current_highest_bid"]
+            starting_price = data["starting_price"]
 
-            self.agent.event_queue.put({"type": "auction-start", "data": {offer_id, current_highest_bid}, "agent": self.agent.jid})
+            await self.agent.event_queue.put({"type": "auction-start", "data": {"offer_id": offer_id, "starting_price": starting_price}, "agent": self.agent.jid})
 
 
         metadata = {"conversation-id": "auction-start"}
@@ -82,7 +82,7 @@ class FutureTenantAgent(Agent):
                             "conversation-id": "bid",
                             **DEFAULT_METADATA,
                         },
-                        body=json.dumps({"data": {"offer_id": self.offer_id}, "amount": self.amount}),
+                        body=json.dumps({"offer_id": self.offer_id, "amount": self.amount}),
                     )
             )
 
@@ -97,7 +97,7 @@ class FutureTenantAgent(Agent):
 
             current_highest_bid = data["current_highest_bid"]
 
-            self.agent.event_queue.put({"type": "outbid-notification", "data": {current_highest_bid}, "agent": self.agent.jid})
+            await self.agent.event_queue.put({"type": "outbid-notification", "data": {"current_highest_bid": current_highest_bid}, "agent": self.agent.jid})
 
         metadata = {"conversation-id": "outbid-notification"}
 
@@ -109,7 +109,7 @@ class FutureTenantAgent(Agent):
             print("AuctionStop got msg")
 
             # TODO: show popup on frontend
-            self.agent.event_queue.put({"type": "auction-stop", "agent": self.agent.jid})
+            await self.agent.event_queue.put({"type": "auction-stop", "agent": self.agent.jid})
 
         metadata = {
             "conversation-id": "auction-stop",
@@ -127,7 +127,7 @@ class FutureTenantAgent(Agent):
             offer_id = data["offer_id"]
             bid_amount = data["bid_amount"]
 
-            self.agent.event_queue.put({"type": "confirmation-request", "data": {offer_id, bid_amount}, "agent": self.agent.jid})
+            await self.agent.event_queue.put({"type": "confirmation-request", "data": {"offer_id": offer_id, "bid_amount": bid_amount}, "agent": self.agent.jid})
 
             # TODO: show popup on frontend
 
@@ -165,7 +165,7 @@ class FutureTenantAgent(Agent):
                 return
             print("AuctionLost got msg")
 
-            self.agent.event_queue.put({"type": "auction-lost", "agent": self.agent.jid})
+            await self.agent.event_queue.put({"type": "auction-lost", "agent": self.agent.jid})
 
         metadata = {
             "conversation-id": "auction-lost",
@@ -191,8 +191,8 @@ class FutureTenantAgent(Agent):
         behavior = self.Confirm(offer_id, confirmation)
         self.add_behaviour(behavior)
 
-    def add_bid(self, offer_id):
-        behavior = self.Bid(offer_id)
+    def add_bid(self, offer_id, amount):
+        behavior = self.Bid(offer_id, amount)
         self.add_behaviour(behavior)
 
 
@@ -226,7 +226,7 @@ class FutureTenantInterface:
 
     def add_bid_bhv(self, agent_id, offer_id, amount):
         agent_entry = next(
-            (agent for agent in self.agents if agent["jid"] == agent_id), None
+            (agent for agent in self.agents if agent["jid"] == f"{agent_id}@localhost"), None
         )
         if not agent_entry:
             print("run bid: Agent not found")
@@ -239,7 +239,7 @@ class FutureTenantInterface:
 
     def add_confirm_bhv(self, agent_id, offer_id, confirmation):
         agent_entry = next(
-            (agent for agent in self.agents if agent["jid"] == agent_id), None
+            (agent for agent in self.agents if agent["jid"] == f"{agent_id}@localhost"), None
         )
         if not agent_entry:
             print("run confirm: Agent not found")

@@ -30,10 +30,10 @@ async def main(page: ft.Page):
 
             event = await event_queue.get()
 
-            match event.type:
+            match event["type"]:
                 case "auction-completed":
-                    final_price = event.data["final_price"]
-                    page.snack_bar = ft.SnackBar(ft.Text(f"{event.agent} completed with final price: {final_price}"))
+                    final_price = event["data"]["final_price"]
+                    page.snack_bar = ft.SnackBar(content=ft.Text(f"{event['agent'].localpart} completed with final price: {final_price}"))
 
     asyncio.create_task(poll_events())
 
@@ -84,18 +84,20 @@ async def main(page: ft.Page):
     price_error_text = ft.Text(visible=False, color=ft.colors.RED_400, size=12)
     area_error_text = ft.Text(visible=False, color=ft.colors.RED_400, size=12)
 
-    # Form elements
+    # Form elements with default values
     seller_name = ft.TextField(
         label="Seller Full Name *",
         hint_text="Enter your full name",
         width=400,
-        on_change=lambda _: validate_name()
+        on_change=lambda _: validate_name(),
+        value="John Doe"
     )
 
     street = ft.TextField(
         label="Street Address or Location Name",
         hint_text="Enter street name and number",
         width=400,
+        value="Złota 22"
     )
 
     local_number = ft.TextField(
@@ -108,36 +110,37 @@ async def main(page: ft.Page):
         label="City (optional)",
         hint_text="Enter city",
         width=190,
+        value="Warszawa"
     )
 
     verified_street = ft.TextField(
         label="Verified Street *",
         width=400,
-        read_only=True
+        read_only=True,
     )
 
     verified_apartment = ft.TextField(
         label="Apartment",
         width=240,
-        read_only=True
+        read_only=True,
     )
 
     verified_voivodeship = ft.TextField(
         label="Voivodeship",
         width=240,
-        read_only=True
+        read_only=True,
     )
 
     verified_postal = ft.TextField(
         label="Postal Code",
         width=190,
-        read_only=True
+        read_only=True,
     )
 
     verified_country = ft.TextField(
         label="Country",
         width=190,
-        read_only=True
+        read_only=True,
     )
 
     area = ft.TextField(
@@ -145,7 +148,8 @@ async def main(page: ft.Page):
         hint_text="Enter apartment area",
         width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
-        on_change=lambda _: validate_area()
+        on_change=lambda _: validate_area(),
+        value="50"
     )
 
     price_lower = ft.TextField(
@@ -153,7 +157,8 @@ async def main(page: ft.Page):
         hint_text="Enter the price",
         width=190,
         keyboard_type=ft.KeyboardType.NUMBER,
-        on_change=lambda _: validate_price()
+        on_change=lambda _: validate_price(),
+        value="1000"
     )
 
     blacklist_container = ft.Container(
