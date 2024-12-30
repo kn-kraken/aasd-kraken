@@ -31,6 +31,7 @@ async def main(page: ft.Page):
                 case "auction-start":
                     page.snack_bar = ft.SnackBar(content=ft.Text("Auction started!"))
                     # TODO: show modal and run agents.add_bid_bhv
+                    
                 case "outbid-notification":
                     current_highest_bid = event.data["current_highest_bid"]
                     page.snack_bar = ft.SnackBar(content=ft.Text("You have been outbid with {current_highest_bid}!"))
@@ -64,7 +65,6 @@ async def main(page: ft.Page):
         ],
         on_change=change_tab,
     )
-
     offers = ft.Column(spacing=20, scroll=True)
 
     # View offers section
@@ -228,6 +228,12 @@ async def main(page: ft.Page):
             page.overlay.append(ft.SnackBar(content=ft.Text("Error opening map!")))
             page.update()
 
+    def place_bid(e):
+            # TODO: Implement bidding logic here
+            # This should connect to agents.add_bid_bhv
+            page.show_snack_bar(ft.SnackBar(content=ft.Text("Placing bid...")))
+            page.update()
+
     def submit_offer():
         if not validate_prices():
             page.overlay.append(ft.SnackBar(content=ft.Text("Fix price errors before submitting")))
@@ -235,7 +241,6 @@ async def main(page: ft.Page):
             return
 
         address = verified_address.value or "[Unverified Address]"
-
         service = service_options_dropdown.value
 
         offers.controls.append(
@@ -246,6 +251,18 @@ async def main(page: ft.Page):
                     ft.Text(f"Price Range: {min_price.value} PLN - {max_price.value} PLN", size=16),
                     ft.Text(f"Description: {description.value}", size=16),
                     ft.Text(f"Service Type: {service}" if service else "No specific services", size=16),
+                    ft.Divider(),
+                    ft.Text("Auction Status", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text("Status: Waiting", size=16, color=ft.colors.GREY_700),
+                    ft.Text("Current Highest Bid: N/A", size=16),
+                    ft.Text("Your Current Bid: N/A", size=16),
+                    ft.ElevatedButton(
+                        "Place Bid",
+                        on_click=place_bid,
+                        color=ft.colors.WHITE,
+                        bgcolor=ft.colors.BLUE_400,
+                        width=200
+                    ),
                 ], spacing=10), padding=20),
                 width=500,
             )
@@ -259,7 +276,7 @@ async def main(page: ft.Page):
 
         agents.register_tenant(f"tenant_{uuid.uuid4().hex[:8]}", details)
 
-        # Clear form
+        # Clear form fields...
         tenant_name.value = ""
         street.value = ""
         city.value = ""
@@ -271,7 +288,7 @@ async def main(page: ft.Page):
 
         page.update()
 
-    # Main form layout
+        # Main form layout
     form_view = ft.Container(
         content=ft.Column([
             ft.Text("Create Rental Offer", size=30, weight=ft.FontWeight.BOLD),
