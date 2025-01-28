@@ -9,11 +9,12 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import asyncio
 import uuid
+import sys
+import os
 
-DEFAULT_METADATA = {
-    "language": "JSON",
-    "ontology": "kraken",
-}
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+from system_data import DEFAULT_METADATA
 
 
 @dataclass
@@ -154,7 +155,7 @@ class HubAgent(Agent):
                     auction = Auction(
                         offer=offer,
                         bids=[],
-                        end_time=datetime.now() + timedelta(seconds=60),
+                        end_time=datetime.now() + timedelta(seconds=20),
                         status="bidding",
                     )
                     self.agent.active_auctions[str(offer_id)] = auction
@@ -181,6 +182,7 @@ class HubAgent(Agent):
                             ),
                         )
                         await self.send(msg)
+                    print("New auction started")
 
         metadata = {
             "performative": "inform",
@@ -193,6 +195,7 @@ class HubAgent(Agent):
             msg = await self.receive(timeout=20)
             if not msg:
                 return
+            print("RegisterRentalOfferRecvBhv got msg")
 
             data = json.loads(msg.body)
             offer = RentalOffer(**data, agent_jid=str(msg.sender))
