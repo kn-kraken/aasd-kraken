@@ -1,47 +1,41 @@
 import pytest
+from testing_common import xmpp as xmpp
 from testing_common import (
-    xmpp_server,
-    start_and_wait,
     get_hub_agent,
     get_premise_for_rent_agent,
     get_future_tenant_agent,
+    rental_offer_register,
+    rental_request_register,
 )
 
 
 @pytest.mark.asyncio
-async def test_rental_offer_register(xmpp_server):
-    hub_agent = get_hub_agent()
-    premise_for_rent_agent = get_premise_for_rent_agent()
+async def test_rental_offer_register(xmpp):
+    # given
+    hub_agent = get_hub_agent(xmpp)
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
 
-    try:
-        await start_and_wait(hub_agent)
-        await start_and_wait(premise_for_rent_agent)
+    # when
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
 
-        assert (
-            len(hub_agent.rental_offers) == 1
-        ), "Premise for rent should register 1 rental offer in Hub"
-    finally:
-        await hub_agent.stop()
-        await premise_for_rent_agent.stop()
+    # then
+    assert (
+        len(hub_agent.rental_offers) == 1
+    ), "Premise for rent should register 1 rental offer in Hub"
 
 
 @pytest.mark.asyncio
-async def test_rental_request_register(xmpp_server):
-    hub_agent = get_hub_agent()
-    premise_for_rent_agent = get_premise_for_rent_agent()
-    future_tenant = get_future_tenant_agent()
+async def test_rental_request_register(xmpp):
+    # given
+    hub_agent = get_hub_agent(xmpp)
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
+    future_tenant = get_future_tenant_agent(xmpp)
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
 
-    try:
-        await start_and_wait(hub_agent)
-        await start_and_wait(premise_for_rent_agent)
-        await start_and_wait(future_tenant)
+    # when
+    await rental_request_register(future_tenant)
 
-        assert (
-            len(hub_agent.rental_offers) == 1
-        ), "Premise for rent should register 1 rental offer in Hub"
-        assert (
-            len(hub_agent.rental_requests) == 1
-        ), "Future tenant should register 1 rental offer in Hub"
-    finally:
-        await hub_agent.stop()
-        await premise_for_rent_agent.stop()
+    # then
+    assert (
+        len(hub_agent.rental_requests) == 1
+    ), "Future tenant should register 1 rental offer in Hub"

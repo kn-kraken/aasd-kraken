@@ -6,31 +6,72 @@ import time
 from spade.agent import Agent
 
 from agents.hub.main import HubAgent
-from agents.premise_for_rent.main import PremiseForRentAgent
-from agents.future_tenant.main import FutureTenantAgent
+from agents.premise_for_rent.main import PremiseForRentAgent, RentalOfferDetails
+from agents.future_tenant.main import FutureTenantAgent, TenantOfferDetails
 
 
-def get_hub_agent():
-    return HubAgent("hub_agent@localhost", "hub_agent_password")
-
-
-def get_premise_for_rent_agent():
-    return PremiseForRentAgent(
-        "premise_for_rent_agent@localhost", "premise_for_rent_agent_password"
+def get_hub_agent(xmpp_server):
+    return HubAgent(
+        f"hub_agent@{xmpp_server['ip']}",
+        "hub_agent_password",
     )
 
 
-def get_future_tenant_agent():
-    return FutureTenantAgent("future_tenant@localhost", "future_tenant_password")
+def get_premise_for_rent_agent(xmpp_server) -> PremiseForRentAgent:
+    return PremiseForRentAgent(
+        f"premise_for_rent_agent@{xmpp_server['ip']}",
+        "premise_for_rent_agent_password",
+        asyncio.Queue(),
+    )
+
+
+def get_future_tenant_agent(xmpp_server) -> FutureTenantAgent:
+    return FutureTenantAgent(
+        f"future_tenant@{xmpp_server['ip']}",
+        "future_tenant_password",
+        asyncio.Queue(),
+    )
+
+
+def get_rental_offer_details() -> RentalOfferDetails:
+    return RentalOfferDetails(
+        starting_price=100.0,
+        location=[52.2297700, 21.0117800],
+    )
+
+
+def get_tenant_offer_details() -> TenantOfferDetails:
+    return TenantOfferDetails(
+        min_price=50.0,
+        max_price=200.0,
+        location=[52.2297700, 21.0117800],
+    )
+
+
+async def rental_offer_register(hub_agent, premise_for_rent_agent: PremiseForRentAgent):
+    await start_and_wait(hub_agent)
+    await start_and_wait(premise_for_rent_agent, delay=1)
+    premise_for_rent_agent.add_service_demand_request(get_rental_offer_details())
+    await wait(2)
+
+
+async def rental_request_register(future_tenant: FutureTenantAgent):
+    await start_and_wait(future_tenant, 1)
+    future_tenant.add_register_rental(get_tenant_offer_details())
+    await wait(2)
 
 
 async def start_and_wait(agent: Agent, delay: int = 3):
     await agent.start(auto_register=True)
+    await wait(delay)
+
+
+async def wait(delay: int):
     await asyncio.sleep(delay)
 
 
 @pytest.fixture(scope="session")
-def xmpp_server():
+def xmpp():
     with DockerContainer("tigase/tigase-xmpp-server:8.0.0") as container:
         container.with_env("DB_ROOT_USER", "admin")
         container.with_env("DB_ROOT_PASS", "admin")
@@ -53,4 +94,6 @@ def xmpp_server():
         time.sleep(18)
         print("XMPP started")
 
-        yield
+        yield {
+            "ip": container.get_container_host_ip(),
+        }
