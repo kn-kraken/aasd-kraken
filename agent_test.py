@@ -1,13 +1,14 @@
 import asyncio
 import pytest
-from testing_common import xmpp as xmpp
 from testing_common import (
     get_hub_agent,
+    add_bid,
     get_premise_for_rent_agent,
     get_future_tenant_agent,
     rental_offer_register,
     rental_request_register,
 )
+from testing_common import xmpp as xmpp
 
 
 @pytest.mark.asyncio
@@ -57,3 +58,19 @@ async def test_auction_start(xmpp):
 
     # then
     assert event["type"] == "auction-start", "Expected auction-start notification"
+
+
+@pytest.mark.asyncio
+async def test_bid(xmpp):
+    # given
+    hub_agent = get_hub_agent(xmpp)
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
+    future_tenant = get_future_tenant_agent(xmpp)
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
+    await rental_request_register(future_tenant)
+
+    # when
+    await add_bid(future_tenant)
+
+    # then
+    assert len(hub_agent.active_auctions["0"].bids) == 1, "Hub should register a bid"

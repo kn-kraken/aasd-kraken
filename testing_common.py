@@ -72,6 +72,11 @@ async def start_and_wait(agent: Agent, delay: int = 3):
     await wait(delay)
 
 
+async def add_bid(future_tenant: FutureTenantAgent):
+    future_tenant.add_bid(0, 120)
+    await wait(2)
+
+
 async def wait(delay: int):
     await asyncio.sleep(delay)
 
