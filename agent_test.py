@@ -1,7 +1,4 @@
 import pytest
-from agents.hub.main import HubAgent
-from agents.premise_for_rent.main import PremiseForRentAgent
-from agents.future_tenant.main import FutureTenantAgent
 from testing_common import (
     xmpp_server,
     start_and_wait,
