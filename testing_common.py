@@ -17,19 +17,25 @@ def get_hub_agent(xmpp_server):
     )
 
 
-def get_premise_for_rent_agent(xmpp_server) -> PremiseForRentAgent:
+def get_premise_for_rent_agent(
+    xmpp_server,
+    event_queue=asyncio.Queue(),
+) -> PremiseForRentAgent:
     return PremiseForRentAgent(
         f"premise_for_rent_agent@{xmpp_server['ip']}",
         "premise_for_rent_agent_password",
-        asyncio.Queue(),
+        event_queue,
     )
 
 
-def get_future_tenant_agent(xmpp_server) -> FutureTenantAgent:
+def get_future_tenant_agent(
+    xmpp_server,
+    event_queue=asyncio.Queue(),
+) -> FutureTenantAgent:
     return FutureTenantAgent(
         f"future_tenant@{xmpp_server['ip']}",
         "future_tenant_password",
-        asyncio.Queue(),
+        event_queue,
     )
 
 
@@ -55,10 +61,10 @@ async def rental_offer_register(hub_agent, premise_for_rent_agent: PremiseForRen
     await wait(2)
 
 
-async def rental_request_register(future_tenant: FutureTenantAgent):
+async def rental_request_register(future_tenant: FutureTenantAgent, delay=2):
     await start_and_wait(future_tenant, 1)
     future_tenant.add_register_rental(get_tenant_offer_details())
-    await wait(2)
+    await wait(delay)
 
 
 async def start_and_wait(agent: Agent, delay: int = 3):
