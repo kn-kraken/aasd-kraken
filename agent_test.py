@@ -2,6 +2,7 @@ import asyncio
 from datetime import timedelta
 import pytest
 from testing_common import (
+    confirmation,
     get_from_queue,
     get_hub_agent,
     add_bid,
@@ -121,3 +122,55 @@ async def test_auction_stop(xmpp):
 
     # then
     assert event["type"] == "auction-stop", "Expected auction-stop notification"
+
+
+@pytest.mark.asyncio
+async def test_auction_confirmation_request(xmpp):
+    # given
+    hub_agent = get_hub_agent(
+        xmpp,
+        auction_time=timedelta(seconds=5),
+        extend_duration=timedelta(seconds=1),
+    )
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
+    future_tenant = get_future_tenant_agent(xmpp)
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
+    await rental_request_register(future_tenant)
+    _ = await get_from_queue(future_tenant)
+
+    # when
+    await add_bid(future_tenant, amount=120, delay=0)
+    _ = await get_from_queue(future_tenant)
+    event = await get_from_queue(future_tenant)
+
+    # then
+    assert (
+        event["type"] == "confirmation-request"
+    ), "Expected confirmation-request notification"
+
+
+@pytest.mark.asyncio
+async def test_auction_completed(xmpp):
+    # given
+    hub_agent = get_hub_agent(
+        xmpp,
+        auction_time=timedelta(seconds=5),
+        extend_duration=timedelta(seconds=1),
+    )
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
+    future_tenant = get_future_tenant_agent(xmpp)
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
+    await rental_request_register(future_tenant)
+    _ = await get_from_queue(future_tenant)
+    await add_bid(future_tenant, amount=120, delay=0)
+    _ = await get_from_queue(future_tenant)
+    _ = await get_from_queue(future_tenant)
+
+    # when
+    await confirmation(future_tenant, delay=1)
+    event = await get_from_queue(premise_for_rent_agent)
+
+    # then
+    assert (
+        event["type"] == "auction-completed"
+    ), "Expected auction-completed notification"

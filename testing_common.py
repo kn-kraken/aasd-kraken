@@ -73,8 +73,8 @@ def get_tenant_offer_details() -> TenantOfferDetails:
     )
 
 
-async def get_from_queue(future_tenant, timeout=10):
-    event = await asyncio.wait_for(future_tenant.event_queue.get(), timeout=timeout)
+async def get_from_queue(agent, timeout=10):
+    event = await asyncio.wait_for(agent.event_queue.get(), timeout=timeout)
     return event
 
 
@@ -100,6 +100,14 @@ async def add_bid(future_tenant: FutureTenantAgent, amount, delay=2):
     future_tenant.add_bid(
         offer_id="0",
         amount=amount,
+    )
+    await wait(delay)
+
+
+async def confirmation(future_tenant: FutureTenantAgent, confirmation=True, delay=2):
+    future_tenant.add_confirm(
+        offer_id="0",
+        confirmation=confirmation,
     )
     await wait(delay)
 
