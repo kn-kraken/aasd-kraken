@@ -89,7 +89,7 @@ async def test_outbid_notification(xmpp):
     await rental_offer_register(hub_agent, premise_for_rent_agent)
     await rental_request_register(future_tenant)
     await rental_request_register(future_tenant2, delay=0)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-start
 
     # when
     await add_bid(future_tenant, amount=120)
@@ -114,7 +114,7 @@ async def test_auction_stop(xmpp):
     future_tenant = get_future_tenant_agent(xmpp)
     await rental_offer_register(hub_agent, premise_for_rent_agent)
     await rental_request_register(future_tenant)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-start
 
     # when
     await add_bid(future_tenant, amount=120, delay=0)
@@ -136,11 +136,11 @@ async def test_auction_confirmation_request(xmpp):
     future_tenant = get_future_tenant_agent(xmpp)
     await rental_offer_register(hub_agent, premise_for_rent_agent)
     await rental_request_register(future_tenant)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-start
 
     # when
     await add_bid(future_tenant, amount=120, delay=0)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-stop
     event = await get_from_queue(future_tenant)
 
     # then
@@ -161,10 +161,10 @@ async def test_auction_completed(xmpp):
     future_tenant = get_future_tenant_agent(xmpp)
     await rental_offer_register(hub_agent, premise_for_rent_agent)
     await rental_request_register(future_tenant)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-start
     await add_bid(future_tenant, amount=120, delay=0)
-    _ = await get_from_queue(future_tenant)
-    _ = await get_from_queue(future_tenant)
+    await get_from_queue(future_tenant)  # auction-stop
+    await get_from_queue(future_tenant)  # confirmation-request
 
     # when
     await confirmation(future_tenant, delay=1)
