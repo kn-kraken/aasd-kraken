@@ -15,6 +15,11 @@ from testing_common import (
 from testing_common import xmpp as xmpp
 
 
+@pytest.fixture(scope="session")
+def event_loop():
+    return asyncio.get_event_loop()
+
+
 @pytest.mark.asyncio
 async def test_rental_offer_register(xmpp):
     # given
