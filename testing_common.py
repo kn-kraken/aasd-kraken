@@ -73,6 +73,11 @@ def get_tenant_offer_details() -> TenantOfferDetails:
     )
 
 
+async def get_from_queue(future_tenant, timeout=10):
+    event = await asyncio.wait_for(future_tenant.event_queue.get(), timeout=timeout)
+    return event
+
+
 async def rental_offer_register(hub_agent, premise_for_rent_agent: PremiseForRentAgent):
     await start_and_wait(hub_agent)
     await start_and_wait(premise_for_rent_agent, delay=1)
