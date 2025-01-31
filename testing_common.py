@@ -1,5 +1,6 @@
 from pathlib import Path
 from testcontainers.core.container import DockerContainer
+from testcontainers.core.waiting_utils import wait_for_logs
 import asyncio
 import pytest
 import time
@@ -102,7 +103,7 @@ def xmpp():
         )
         container.start()
         print("XMPP warmup")
-        time.sleep(18)
+        wait_for_logs(container, "Server finished starting up", timeout=60)
         print("XMPP started")
 
         yield {
