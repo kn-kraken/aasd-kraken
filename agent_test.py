@@ -5,6 +5,7 @@ from testing_common import (
     add_bid,
     get_premise_for_rent_agent,
     get_future_tenant_agent,
+    get_future_tenant_agent2,
     rental_offer_register,
     rental_request_register,
 )
@@ -48,13 +49,12 @@ async def test_auction_start(xmpp):
     # given
     hub_agent = get_hub_agent(xmpp)
     premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
-    event_queue = asyncio.Queue()
-    future_tenant = get_future_tenant_agent(xmpp, event_queue)
+    future_tenant = get_future_tenant_agent(xmpp)
     await rental_offer_register(hub_agent, premise_for_rent_agent)
 
     # when
-    await rental_request_register(future_tenant, delay=0)
-    event = await event_queue.get()
+    await rental_request_register(future_tenant, delay=2)
+    event = future_tenant.event_queue.get_nowait()
 
     # then
     assert event["type"] == "auction-start", "Expected auction-start notification"
@@ -70,7 +70,30 @@ async def test_bid(xmpp):
     await rental_request_register(future_tenant)
 
     # when
-    await add_bid(future_tenant)
+    await add_bid(future_tenant, amount=120)
 
     # then
     assert len(hub_agent.active_auctions["0"].bids) == 1, "Hub should register a bid"
+
+
+@pytest.mark.asyncio
+async def test_outbid_notification(xmpp):
+    # given
+    hub_agent = get_hub_agent(xmpp)
+    premise_for_rent_agent = get_premise_for_rent_agent(xmpp)
+    future_tenant = get_future_tenant_agent(xmpp)
+    future_tenant2 = get_future_tenant_agent2(xmpp)
+    await rental_offer_register(hub_agent, premise_for_rent_agent)
+    await rental_request_register(future_tenant)
+    await rental_request_register(future_tenant2)
+    _ = future_tenant.event_queue.get_nowait()
+
+    # when
+    await add_bid(future_tenant, amount=120)
+    await add_bid(future_tenant2, amount=140, delay=2)
+    event = future_tenant.event_queue.get_nowait()
+
+    # then
+    assert (
+        event["type"] == "outbid-notification"
+    ), "Expected outbid-notification notification"

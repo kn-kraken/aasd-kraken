@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -11,10 +12,16 @@ from agents.premise_for_rent.main import PremiseForRentAgent, RentalOfferDetails
 from agents.future_tenant.main import FutureTenantAgent, TenantOfferDetails
 
 
-def get_hub_agent(xmpp_server):
+def get_hub_agent(
+    xmpp_server,
+    auction_time=timedelta(seconds=120),
+    extend_duration=timedelta(seconds=60),
+):
     return HubAgent(
-        f"hub_agent@{xmpp_server['ip']}",
-        "hub_agent_password",
+        jid=f"hub_agent@{xmpp_server['ip']}",
+        password="hub_agent_password",
+        auction_time=auction_time,
+        extend_duration=extend_duration,
     )
 
 
@@ -36,6 +43,17 @@ def get_future_tenant_agent(
     return FutureTenantAgent(
         f"future_tenant@{xmpp_server['ip']}",
         "future_tenant_password",
+        event_queue,
+    )
+
+
+def get_future_tenant_agent2(
+    xmpp_server,
+    event_queue=asyncio.Queue(),
+) -> FutureTenantAgent:
+    return FutureTenantAgent(
+        f"future_tenant2@{xmpp_server['ip']}",
+        "future_tenant_password2",
         event_queue,
     )
 
@@ -73,9 +91,12 @@ async def start_and_wait(agent: Agent, delay: int = 3):
     await wait(delay)
 
 
-async def add_bid(future_tenant: FutureTenantAgent):
-    future_tenant.add_bid(0, 120)
-    await wait(2)
+async def add_bid(future_tenant: FutureTenantAgent, amount, delay=2):
+    future_tenant.add_bid(
+        offer_id="0",
+        amount=amount,
+    )
+    await wait(delay)
 
 
 async def wait(delay: int):

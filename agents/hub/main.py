@@ -13,7 +13,9 @@ import sys
 import os
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "database"))
+)
 from system_data import DEFAULT_METADATA
 
 
@@ -55,8 +57,8 @@ class Auction:
     current_confirming_bidder: Optional[str] = None
     confirmation_deadline: Optional[datetime] = None
 
-    def extend_duration(self):
-        new_end_time = datetime.now() + timedelta(seconds=5)
+    def extend_duration(self, duration: timedelta):
+        new_end_time = datetime.now() + duration
         if new_end_time > self.end_time:
             self.end_time = new_end_time
 
@@ -68,11 +70,19 @@ class Auction:
 
 
 class HubAgent(Agent):
-    def __init__(self, jid, password):
+    def __init__(
+        self,
+        jid,
+        password,
+        auction_time=timedelta(seconds=20),
+        extend_duration=timedelta(seconds=5),
+    ):
         super().__init__(jid, password)
         self.rental_offers = []
         self.rental_requests = []
         self.active_auctions: Dict[str, Auction] = {}  # offer_id -> Auction
+        self.auction_time = auction_time
+        self.extend_duration = extend_duration
 
     class RegisterRentalRequestRecvBhv(CyclicBehaviour):
         async def run(self):
@@ -155,7 +165,7 @@ class HubAgent(Agent):
                     auction = Auction(
                         offer=offer,
                         bids=[],
-                        end_time=datetime.now() + timedelta(seconds=20),
+                        end_time=datetime.now() + self.agent.auction_time,
                         status="bidding",
                     )
                     self.agent.active_auctions[str(offer_id)] = auction
@@ -212,7 +222,7 @@ class HubAgent(Agent):
                 auction = Auction(
                     offer=offer,
                     bids=[],
-                    end_time=datetime.now() + timedelta(seconds=60),
+                    end_time=datetime.now() + self.agent.auction_time,
                     status="bidding",
                 )
                 self.agent.active_auctions[offer_id] = auction
@@ -280,7 +290,7 @@ class HubAgent(Agent):
                 return
 
             auction.bids[current_bid] = new_bid
-            auction.extend_duration()
+            auction.extend_duration(self.agent.extend_duration)
 
             # Notify outbid agents
             outbid_agents = auction.get_outbid_agents(bid_amount)
