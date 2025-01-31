@@ -97,6 +97,7 @@ def xmpp():
             host=str(Path(__file__).parent / "tigase/config/config.tdsl"),
             container="/home/tigase/tigase-server/etc/config.tdsl",
         )
+        # sadly spade does not support custom xmpp ports, so multiple instances of xmpp with dynamic ports cannot be used
         container.with_bind_ports(
             container=5222,
             host=5222,
