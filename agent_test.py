@@ -34,6 +34,9 @@ async def test_rental_offer_register(xmpp):
         len(hub_agent.rental_offers) == 1
     ), "Premise for rent should register 1 rental offer in Hub"
 
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+
 
 @pytest.mark.asyncio
 async def test_rental_request_register(xmpp):
@@ -51,6 +54,10 @@ async def test_rental_request_register(xmpp):
         len(hub_agent.rental_requests) == 1
     ), "Future tenant should register 1 rental offer in Hub"
 
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
+
 
 @pytest.mark.asyncio
 async def test_auction_start(xmpp):
@@ -67,6 +74,10 @@ async def test_auction_start(xmpp):
     # then
     assert event["type"] == "auction-start", "Expected auction-start notification"
 
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
+
 
 @pytest.mark.asyncio
 async def test_bid(xmpp):
@@ -82,6 +93,10 @@ async def test_bid(xmpp):
 
     # then
     assert len(hub_agent.active_auctions["0"].bids) == 1, "Hub should register a bid"
+
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
 
 
 @pytest.mark.asyncio
@@ -106,6 +121,11 @@ async def test_outbid_notification(xmpp):
         event["type"] == "outbid-notification"
     ), "Expected outbid-notification notification"
 
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
+    await future_tenant2.stop()
+
 
 @pytest.mark.asyncio
 async def test_auction_stop(xmpp):
@@ -127,6 +147,10 @@ async def test_auction_stop(xmpp):
 
     # then
     assert event["type"] == "auction-stop", "Expected auction-stop notification"
+
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
 
 
 @pytest.mark.asyncio
@@ -152,6 +176,10 @@ async def test_auction_confirmation_request(xmpp):
     assert (
         event["type"] == "confirmation-request"
     ), "Expected confirmation-request notification"
+
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
 
 
 @pytest.mark.asyncio
@@ -179,3 +207,7 @@ async def test_auction_completed(xmpp):
     assert (
         event["type"] == "auction-completed"
     ), "Expected auction-completed notification"
+
+    await hub_agent.stop()
+    await premise_for_rent_agent.stop()
+    await future_tenant.stop()
