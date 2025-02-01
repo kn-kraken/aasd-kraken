@@ -18,7 +18,6 @@ sys.path.append(
 )
 from system_data import DEFAULT_METADATA
 
-
 @dataclass
 class RentalOffer:
     agent_jid: str
@@ -286,7 +285,6 @@ class HubAgent(Agent):
             )
             new_bid = Bid(
                 request=current_bid.request,
-                request=auction.offer,
                 bidder_jid=bidder_jid,
                 amount=bid_amount,
                 timestamp=datetime.now(),
@@ -482,7 +480,7 @@ class HubAgent(Agent):
                     request.location, data["localization"]
                 ):
                     request.votes += 1
-
+            print("ServiceDemandRequest handled")
         metadata = {
             "performative": "inform",
             "conversation-id": "ServiceDemandRequest",
