@@ -23,7 +23,6 @@ from system_data import DEFAULT_METADATA
 class RentalOfferDetails:
     starting_price: float
     location: list[float]
-    service_type: str
 
 
 class PremiseForRentAgent(Agent):
@@ -49,7 +48,6 @@ class PremiseForRentAgent(Agent):
                     {
                         "starting_price": self.rental_offer_details.starting_price,
                         "location": self.rental_offer_details.location,
-                        "serivce_type": self.rental_offer_details.service_type,
                     }
                 ),
             )

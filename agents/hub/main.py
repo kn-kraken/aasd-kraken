@@ -23,8 +23,6 @@ from system_data import DEFAULT_METADATA
 class RentalOffer:
     agent_jid: str
     starting_price: int
-    service_type: str
-    votes: int
     location: tuple[float, float]
 
 
@@ -33,6 +31,7 @@ class RentalRequest:
     min_price: int
     max_price: int
     location: tuple[float, float]
+    votes: int
     agent_jid: str
 
 
@@ -49,6 +48,7 @@ def sigmoid(x):
 
 @dataclass
 class Bid:
+    request: RentalRequest
     bidder_jid: str
     amount: int
     timestamp: datetime
@@ -109,6 +109,7 @@ class HubAgent(Agent):
                 ):
                     auction.bids.append(
                         Bid(
+                            request=request,
                             bidder_jid=request.agent_jid,
                             amount=auction.offer.starting_price,
                             timestamp=datetime.now(),
@@ -172,6 +173,7 @@ class HubAgent(Agent):
                     for req in matching_requests:
                         auction.bids.append(
                             Bid(
+                                request=req,
                                 bidder_jid=req.agent_jid,
                                 amount=offer.starting_price,
                                 timestamp=datetime.now(),
@@ -229,6 +231,7 @@ class HubAgent(Agent):
                 for request in matching_requests:
                     auction.bids.append(
                         Bid(
+                            request=request,
                             bidder_jid=request.agent_jid,
                             amount=offer.starting_price,
                             timestamp=datetime.now(),
@@ -274,15 +277,19 @@ class HubAgent(Agent):
                 return
 
             # Record the bid
-            new_bid = Bid(
-                bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now()
-            )
             current_bid = next(
                 (
                     i
                     for i, bid in enumerate(auction.bids)
                     if bid.bidder_jid == bidder_jid
                 ),
+            )
+            new_bid = Bid(
+                request=current_bid.request,
+                request=auction.offer,
+                bidder_jid=bidder_jid,
+                amount=bid_amount,
+                timestamp=datetime.now(),
             )
             if new_bid.amount <= auction.bids[current_bid].amount:
                 return
@@ -349,7 +356,7 @@ class HubAgent(Agent):
                                 {
                                     "offer_id": offer_id,
                                     "bid_amount": winning_bids[0].amount
-                                    * sigmoid(auction.offer.votes),
+                                    * sigmoid(winning_bids[0].request.votes),
                                 }
                             ),
                         )
@@ -468,17 +475,13 @@ class HubAgent(Agent):
             if not msg:
                 return
 
-            # "localization": self.localization,
-            # "service_type": self.service_type,
-            # "priority": self.priority,
-
             data = json.loads(msg.body)
 
-            for offer in self.agent.rental_offers:
-                if offer.service_type == data["service_type"] and is_close(
-                    offer.location, data["localization"]
+            for request in self.agent.rental_requests:
+                if request.service_type == data["service_type"] and is_close(
+                    request.location, data["localization"]
                 ):
-                    offer.votes += 1
+                    request.votes += 1
 
         metadata = {
             "performative": "inform",
