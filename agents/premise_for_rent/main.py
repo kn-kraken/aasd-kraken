@@ -13,8 +13,11 @@ import uuid
 import os
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "database"))
+)
 from system_data import DEFAULT_METADATA
+
 
 @dataclass
 class RentalOfferDetails:
@@ -60,13 +63,18 @@ class PremiseForRentAgent(Agent):
             final_price = data["final_price"]
 
             print("AuctionCompleted got msg")
-            await self.agent.event_queue.put({"type": "auction-completed", "data": {"final_price": final_price}, "agent": self.agent.jid })
+            await self.agent.event_queue.put(
+                {
+                    "type": "auction-completed",
+                    "data": {"final_price": final_price},
+                    "agent": self.agent.jid,
+                }
+            )
 
         metadata = {
             "conversation-id": "auction-completed",
             **DEFAULT_METADATA,
         }
-
 
     async def setup(self):
         print("PremiseForRentAgent started")
@@ -107,14 +115,18 @@ class PremiseForRentInterface:
         t = threading.Thread(target=agent_thread_main, daemon=True)
         t.start()
 
-        self.agents.append({
-            "agent": new_agent,
-            "loop": new_loop,
-            "thread": t,
-            "jid": new_jid,
-        })
+        self.agents.append(
+            {
+                "agent": new_agent,
+                "loop": new_loop,
+                "thread": t,
+                "jid": new_jid,
+            }
+        )
 
-        new_loop.call_soon_threadsafe(lambda: new_agent.add_service_demand_request(rental_offer_details))
+        new_loop.call_soon_threadsafe(
+            lambda: new_agent.add_service_demand_request(rental_offer_details)
+        )
 
 
 async def main():

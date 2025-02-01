@@ -13,7 +13,9 @@ import sys
 import os
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "database"))
+)
 from system_data import DEFAULT_METADATA
 
 
@@ -29,6 +31,7 @@ class RentalRequest:
     min_price: int
     max_price: int
     location: tuple[float, float]
+    votes: int
     agent_jid: str
 
 
@@ -39,8 +42,13 @@ def is_close(location1, location2):
     )
 
 
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+
 @dataclass
 class Bid:
+    request: RentalRequest
     bidder_jid: str
     amount: int
     timestamp: datetime
@@ -101,6 +109,7 @@ class HubAgent(Agent):
                 ):
                     auction.bids.append(
                         Bid(
+                            request=request,
                             bidder_jid=request.agent_jid,
                             amount=auction.offer.starting_price,
                             timestamp=datetime.now(),
@@ -164,6 +173,7 @@ class HubAgent(Agent):
                     for req in matching_requests:
                         auction.bids.append(
                             Bid(
+                                request=req,
                                 bidder_jid=req.agent_jid,
                                 amount=offer.starting_price,
                                 timestamp=datetime.now(),
@@ -198,7 +208,7 @@ class HubAgent(Agent):
             print("RegisterRentalOfferRecvBhv got msg")
 
             data = json.loads(msg.body)
-            offer = RentalOffer(**data, agent_jid=str(msg.sender))
+            offer = RentalOffer(**data, agent_jid=str(msg.sender), votes=0)
             offer_id = str(uuid.uuid4())
 
             matching_requests = [
@@ -221,6 +231,7 @@ class HubAgent(Agent):
                 for request in matching_requests:
                     auction.bids.append(
                         Bid(
+                            request=request,
                             bidder_jid=request.agent_jid,
                             amount=offer.starting_price,
                             timestamp=datetime.now(),
@@ -266,15 +277,19 @@ class HubAgent(Agent):
                 return
 
             # Record the bid
-            new_bid = Bid(
-                bidder_jid=bidder_jid, amount=bid_amount, timestamp=datetime.now()
-            )
             current_bid = next(
                 (
                     i
                     for i, bid in enumerate(auction.bids)
                     if bid.bidder_jid == bidder_jid
                 ),
+            )
+            new_bid = Bid(
+                request=current_bid.request,
+                request=auction.offer,
+                bidder_jid=bidder_jid,
+                amount=bid_amount,
+                timestamp=datetime.now(),
             )
             if new_bid.amount <= auction.bids[current_bid].amount:
                 return
@@ -340,7 +355,8 @@ class HubAgent(Agent):
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
-                                    "bid_amount": winning_bids[0].amount,
+                                    "bid_amount": winning_bids[0].amount
+                                    * sigmoid(winning_bids[0].request.votes),
                                 }
                             ),
                         )
@@ -450,6 +466,26 @@ class HubAgent(Agent):
         metadata = {
             "performative": "inform",
             "conversation-id": "confirmation-response",
+            **DEFAULT_METADATA,
+        }
+
+    class ServiceDemandRequestRecvBehaviour(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+
+            data = json.loads(msg.body)
+
+            for request in self.agent.rental_requests:
+                if request.service_type == data["service_type"] and is_close(
+                    request.location, data["localization"]
+                ):
+                    request.votes += 1
+
+        metadata = {
+            "performative": "inform",
+            "conversation-id": "ServiceDemandRequest",
             **DEFAULT_METADATA,
         }
 
