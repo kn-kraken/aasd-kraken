@@ -13,7 +13,9 @@ import sys
 import os
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'database')))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "database"))
+)
 from system_data import DEFAULT_METADATA
 
 
@@ -21,6 +23,8 @@ from system_data import DEFAULT_METADATA
 class RentalOffer:
     agent_jid: str
     starting_price: int
+    service_type: str
+    votes: int
     location: tuple[float, float]
 
 
@@ -37,6 +41,10 @@ def is_close(location1, location2):
         abs(location1[0] - location2[0]) < 0.01
         and abs(location1[1] - location2[1]) < 0.01
     )
+
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
 
 
 @dataclass
@@ -198,7 +206,7 @@ class HubAgent(Agent):
             print("RegisterRentalOfferRecvBhv got msg")
 
             data = json.loads(msg.body)
-            offer = RentalOffer(**data, agent_jid=str(msg.sender))
+            offer = RentalOffer(**data, agent_jid=str(msg.sender), votes=0)
             offer_id = str(uuid.uuid4())
 
             matching_requests = [
@@ -340,7 +348,8 @@ class HubAgent(Agent):
                             body=json.dumps(
                                 {
                                     "offer_id": offer_id,
-                                    "bid_amount": winning_bids[0].amount,
+                                    "bid_amount": winning_bids[0].amount
+                                    * sigmoid(auction.offer.votes),
                                 }
                             ),
                         )
@@ -450,6 +459,30 @@ class HubAgent(Agent):
         metadata = {
             "performative": "inform",
             "conversation-id": "confirmation-response",
+            **DEFAULT_METADATA,
+        }
+
+    class ServiceDemandRequestRecvBehaviour(CyclicBehaviour):
+        async def run(self):
+            msg = await self.receive(timeout=20)
+            if not msg:
+                return
+
+            # "localization": self.localization,
+            # "service_type": self.service_type,
+            # "priority": self.priority,
+
+            data = json.loads(msg.body)
+
+            for offer in self.agent.rental_offers:
+                if offer.service_type == data["service_type"] and is_close(
+                    offer.location, data["localization"]
+                ):
+                    offer.votes += 1
+
+        metadata = {
+            "performative": "inform",
+            "conversation-id": "ServiceDemandRequest",
             **DEFAULT_METADATA,
         }
 

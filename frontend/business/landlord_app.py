@@ -426,7 +426,8 @@ async def main(page: ft.Page):
 
         details = RentalOfferDetails(
             starting_price=float(price_lower.value),
-            location=[coordinates["lat"], coordinates["lng"]]
+            location=[coordinates["lat"], coordinates["lng"]],
+            service_type="Żabka",
         )
 
         agents.add_rental_offer(f"rentaloffer_{uuid.uuid4().hex[:8]}", details)
