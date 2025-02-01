@@ -469,7 +469,9 @@ class HubAgent(Agent):
 
     class ServiceDemandRequestRecvBehaviour(CyclicBehaviour):
         async def run(self):
+            print("ServiceDemandRequestRecvBehaviour running")
             msg = await self.receive(timeout=20)
+            print("ServiceDemandRequest handled")
             if not msg:
                 return
 
@@ -480,7 +482,6 @@ class HubAgent(Agent):
                     request.location, data["localization"]
                 ):
                     request.votes += 1
-            print("ServiceDemandRequest handled")
         metadata = {
             "performative": "inform",
             "conversation-id": "ServiceDemandRequest",
