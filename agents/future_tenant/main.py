@@ -23,7 +23,7 @@ class TenantOfferDetails:
 
 
 class FutureTenantAgent(Agent):
-    def __init__(self, jid, password, event_queue, *args, **kwargs):
+    def __init__(self, jid, password, event_queue: asyncio.Queue, *args, **kwargs):
         super().__init__(jid, password, *args, **kwargs)
         self.event_queue = event_queue
 
